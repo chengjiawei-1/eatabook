@@ -34,8 +34,8 @@ export const getAvatarUrl = (avatarUrl: string): string => {
   }
   
   // 开发环境：把旧服务器地址转换成当前前端代理可访问的相对路径
-  if (avatarUrl.includes('118.178.122.36:8081')) {
-    return avatarUrl.replace('http://118.178.122.36:8081', '');
+  if (avatarUrl.includes('localhost:8081')) {
+    return avatarUrl.replace('http://localhost:8081', '');
   }
   
   // 处理历史数据中的绝对URL

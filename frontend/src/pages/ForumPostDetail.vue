@@ -829,13 +829,23 @@ const deleteComment = async (commentId: number) => {
 }
 
 // 详情页点赞
+const unwrapForumMutationResponse = (res: any) => {
+  const body = res?.code !== undefined ? res : res?.data;
+  return {
+    code: body?.code,
+    data: body?.data || {},
+    msg: body?.msg
+  };
+};
+
 const likePost = async () => {
   try {
     const res = await togglePostLike(post.value.postId);
-    if (res.data.code === 200) {
+    const { code, data } = unwrapForumMutationResponse(res);
+    if (code === 200) {
       // 直接覆盖当前页面的唯一 post 对象
-      post.value.liked = res.data.data.liked;
-      post.value.likeCount = res.data.data.likeCount;
+      post.value.liked = data.liked;
+      post.value.likeCount = data.likeCount;
       
       updatePostLikeState(post.value.postId, post.value.liked, post.value.likeCount);
     }
@@ -848,11 +858,12 @@ const likePost = async () => {
 const favoritePost = async () => {
   try {
     const res = await togglePostFavorite(post.value.postId);
-    if (res.data.code === 200) {
+    const { code, data } = unwrapForumMutationResponse(res);
+    if (code === 200) {
       // 使用 Object.assign 确保Vue响应性更新
       Object.assign(post.value, {
-        favorited: res.data.data.favorited,
-        favoriteCount: res.data.data.favoriteCount
+        favorited: data.favorited,
+        favoriteCount: data.favoriteCount
       });
       
       // 强制触发UI更新

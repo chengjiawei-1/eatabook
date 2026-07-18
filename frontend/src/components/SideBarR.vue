@@ -65,11 +65,26 @@ const wordRef = ref()
 let wordChart: any
 let refreshTimer: any = null
 const isRefreshing = ref(false)
+const keywords = ref<Array<{ text: string; value: number }>>([])
+const REFRESH_INTERVAL = 30000
+
+const normalizeKeywords = (data: any) => {
+  if (!Array.isArray(data)) return [];
+  return data
+    .map((item: any) => ({
+      text: String(item.text || item.keyword || '').trim(),
+      value: Number(item.value || item.searchCount || 0)
+    }))
+    .filter(item => item.text)
+    .slice(0, 20);
+};
 
 const loadWordCloud = async () => {
   try {
     const data = await getTopKeywords();
+    keywords.value = normalizeKeywords(data);
     nextTick(() => {
+      if (!wordRef.value) return;
       if (!wordChart) {
         wordChart = echarts.init(wordRef.value);
       }
@@ -77,11 +92,11 @@ const loadWordCloud = async () => {
       const option = {
         series: [{
           type: 'wordCloud',
-          shape: 'circle',
+          shape: 'rect',
           keepAspect: false,
-          sizeRange: [12, 32], // 稍微调小一点，适合侧边栏
+          sizeRange: [14, 34], // 侧边栏词云字号
           rotationRange: [0, 0], // 不旋转，方便阅读
-          gridSize: 10,
+          gridSize: 4,
           drawOutOfBound: false,
           textStyle: {
             fontFamily: 'sans-serif',
@@ -98,13 +113,13 @@ const loadWordCloud = async () => {
               textShadowColor: 'rgba(0,0,0,0.1)'
             }
           },
-          data: data.map((item: any) => ({
+          data: keywords.value.map((item: any) => ({
             name: item.text,
             value: item.value
           }))
         }]
       };
-      wordChart.setOption(option);
+      wordChart.setOption(option, true);
     });
   } catch (error) {
     console.error('获取词云数据失败:', error);
@@ -121,13 +136,20 @@ const handleResize = () => {
   wordChart?.resize();
 };
 
+const handleKeywordsUpdated = () => {
+  refreshWordCloud();
+};
+
 onMounted(async () => {
   await loadWordCloud();
+  refreshTimer = setInterval(loadWordCloud, REFRESH_INTERVAL);
   window.addEventListener("resize", handleResize);
+  window.addEventListener("forum-search-keywords-updated", handleKeywordsUpdated);
 })
 
 onUnmounted(() => {
   window.removeEventListener("resize", handleResize);
+  window.removeEventListener("forum-search-keywords-updated", handleKeywordsUpdated);
   if (refreshTimer) clearInterval(refreshTimer);
   if (wordChart) {
     wordChart.dispose()

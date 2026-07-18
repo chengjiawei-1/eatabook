@@ -1,35 +1,35 @@
 <template>
-  <div class="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
+  <div class="min-h-screen flex flex-col overflow-x-hidden bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
     <!-- 导航栏 -->
     <Nav class="shadow-sm z-50" @publish="openPublishModal" />
    
-    <main class="flex-grow pt-24 pb-16 container mx-0 sm:mx-2 px-2 sm:px-4 max-w-full">
+    <main class="flex-grow w-full overflow-x-hidden pt-24 pb-16 px-2 sm:px-4">
       <!-- 三栏布局结构 -->
-      <div class="flex flex-col lg:flex-row gap-2 lg:gap-1">
+      <div class="flex w-full min-w-0 flex-col lg:flex-row gap-2 lg:gap-1">
         <!-- 左侧侧边栏 -->
         <div 
           :class="[
-            'fixed left-0 top-24 bottom-0 overflow-y-auto p-6 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 z-40 transition-all duration-300',
+            'fixed left-0 top-20 bottom-0 overflow-y-auto border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 z-40 transition-all duration-300',
             sidebarLeftVisible ? 'translate-x-0 w-64' : '-translate-x-full w-0'
           ]"
         >
           <div :class="sidebarLeftVisible ? 'w-full' : 'w-0 overflow-hidden'">
             <SideBarL @category-change="handleCategoryChange" />
           </div>
-          
-          <!-- 添加收起按钮 -->
-          <button 
-            @click="toggleSidebarLeft"
-            class="absolute top-4 -right-3 bg-slate-200 dark:bg-slate-700 rounded-r-lg p-1 shadow-md hover:bg-slate-300 dark:hover:bg-slate-600"
-          >
-            <i :class="sidebarLeftVisible ? 'fa-solid fa-chevron-left' : 'fa-solid fa-chevron-right'"></i>
-          </button>
         </div>
+        <button 
+          @click="toggleSidebarLeft"
+          class="fixed top-[45%] z-30 h-16 w-4 -translate-y-1/2 rounded-r-full border border-l-0 border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-800/90 text-slate-400 shadow-sm backdrop-blur hover:w-5 hover:text-amber-600 dark:hover:text-amber-400 transition-all duration-300"
+          :class="sidebarLeftVisible ? 'left-64' : 'left-0'"
+          :title="sidebarLeftVisible ? '收起左侧栏' : '展开左侧栏'"
+        >
+          <i class="fa-solid fa-grip-lines-vertical text-xs"></i>
+        </button>
         
         <!-- 中间内容区 - 搜索框和帖子列表 -->
         <div 
           :class="[
-            'flex-1 order-3 lg:order-2 transition-all duration-300',
+            'min-w-0 flex-1 order-3 lg:order-2 transition-all duration-300',
             sidebarLeftVisible && sidebarRightVisible ? 'lg:ml-64 lg:mr-64' : 
             sidebarLeftVisible ? 'lg:ml-64' : 
             sidebarRightVisible ? 'lg:mr-64' : 'lg:mx-0'
@@ -88,16 +88,6 @@
                 <i :class="showSearchBox ? 'fa-solid fa-times' : 'fa-solid fa-search'"></i>
               </button>
               
-              <button
-                @click="toggleBothSidebars"
-                class="p-2 rounded-lg transition-all duration-200 flex items-center justify-center"
-                :class="bothSidebarsCollapsed 
-                  ? 'bg-amber-500 text-white' 
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-800 dark:hover:text-slate-200'"
-                :title="bothSidebarsCollapsed ? '展开侧边栏' : '收起侧边栏'"
-              >
-                <i :class="bothSidebarsCollapsed ? 'fa-solid fa-expand' : 'fa-solid fa-compress'"></i>
-              </button>
             </div>
           </div>
           
@@ -331,22 +321,22 @@
         <!-- 右侧侧边栏 -->
         <div 
           :class="[
-            'fixed right-0 top-24 bottom-0 overflow-y-auto p-6 border-l border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 z-40 transition-all duration-300',
+            'fixed right-0 top-20 bottom-0 overflow-y-auto border-l border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 z-40 transition-all duration-300',
             sidebarRightVisible ? 'translate-x-0 w-64' : 'translate-x-full w-0'
           ]"
         >
           <div :class="sidebarRightVisible ? 'w-full' : 'w-0 overflow-hidden'">
             <SideBarR />
           </div>
-          
-          <!-- 添加收起按钮 -->
-          <button 
-            @click="toggleSidebarRight"
-            class="absolute top-4 -left-3 bg-slate-200 dark:bg-slate-700 rounded-l-lg p-1 shadow-md hover:bg-slate-300 dark:hover:bg-slate-600"
-          >
-            <i :class="sidebarRightVisible ? 'fa-solid fa-chevron-right' : 'fa-solid fa-chevron-left'"></i>
-          </button>
         </div>
+        <button 
+          @click="toggleSidebarRight"
+          class="fixed top-[45%] z-30 h-16 w-4 -translate-y-1/2 rounded-l-full border border-r-0 border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-800/90 text-slate-400 shadow-sm backdrop-blur hover:w-5 hover:text-amber-600 dark:hover:text-amber-400 transition-all duration-300"
+          :class="sidebarRightVisible ? 'right-64' : 'right-0'"
+          :title="sidebarRightVisible ? '收起右侧栏' : '展开右侧栏'"
+        >
+          <i class="fa-solid fa-grip-lines-vertical text-xs"></i>
+        </button>
 
       </div>
     </main>
@@ -457,6 +447,8 @@ interface Category {
 //搜索记录
 interface ForumSearchRecord {
   searchId?: number;
+  id?: number;
+  search_id?: number;
   userId: number;
   searchContent: string;
   searchTime?: string;
@@ -515,7 +507,8 @@ let observer: IntersectionObserver | null = null
 // 添加侧边栏控制状态
 const sidebarLeftVisible = ref(true);
 const sidebarRightVisible = ref(true);
-const bothSidebarsCollapsed = ref(false); // 记录两侧边栏是否都被收起
+const SIDEBAR_LEFT_VISIBLE_KEY = 'forumSidebarLeftVisible';
+const SIDEBAR_RIGHT_VISIBLE_KEY = 'forumSidebarRightVisible';
 
 // 添加新的响应式数据
 const activeTab = ref<'recommend' | 'following' | 'my'>('recommend');
@@ -760,43 +753,19 @@ const openPublishModalAndScroll = () => {
 };
 
 // 侧边栏控制函数
+const saveSidebarState = () => {
+  localStorage.setItem(SIDEBAR_LEFT_VISIBLE_KEY, String(sidebarLeftVisible.value));
+  localStorage.setItem(SIDEBAR_RIGHT_VISIBLE_KEY, String(sidebarRightVisible.value));
+};
+
 const toggleSidebarLeft = () => {
   sidebarLeftVisible.value = !sidebarLeftVisible.value;
-  // 更新整体状态
-  bothSidebarsCollapsed.value = !sidebarLeftVisible.value && !sidebarRightVisible.value;
-  localStorage.setItem('bothSidebarsCollapsed', bothSidebarsCollapsed.value.toString());
+  saveSidebarState();
 };
 
 const toggleSidebarRight = () => {
   sidebarRightVisible.value = !sidebarRightVisible.value;
-  // 更新整体状态
-  bothSidebarsCollapsed.value = !sidebarLeftVisible.value && !sidebarRightVisible.value;
-  localStorage.setItem('bothSidebarsCollapsed', bothSidebarsCollapsed.value.toString());
-};
-
-// 一键收起两侧边栏
-const collapseBothSidebars = () => {
-  sidebarLeftVisible.value = false;
-  sidebarRightVisible.value = false;
-  bothSidebarsCollapsed.value = true;
-  localStorage.setItem('bothSidebarsCollapsed', 'true');
-};
-
-// 一键展开两侧边栏
-const expandBothSidebars = () => {
-  sidebarLeftVisible.value = true;
-  sidebarRightVisible.value = true;
-  bothSidebarsCollapsed.value = false;
-  localStorage.setItem('bothSidebarsCollapsed', 'false');
-};
-
-// 切换两侧边栏状态
-const toggleBothSidebars = () => {
-  if (bothSidebarsCollapsed.value) {
-    expandBothSidebars();
-  } else {
-    collapseBothSidebars();
-  }
+  saveSidebarState();
 };
 
 
@@ -898,7 +867,7 @@ const loadSearchHistory = async () => {
   } catch (error) {
     console.error('加载搜索历史失败:', error);
     // 如果API调用失败，使用本地存储作为备用方案
-    loadSearchHistory();
+    loadLocalSearchHistory();
   }
 };
 
@@ -951,6 +920,7 @@ const saveSearchRecord = async (keyword: string) => {
     
     await saveSearchRecordAPI({ userId, searchContent: keyword });
     await loadSearchHistory();
+    window.dispatchEvent(new CustomEvent('forum-search-keywords-updated'));
   } catch (error) {
     console.error('保存搜索记录失败:', error);
     // API失败时使用本地存储
@@ -976,32 +946,32 @@ const selectHistoryItem = (record: ForumSearchRecord) => {
 // 删除单条历史记录
 const removeHistoryItem = async (index: number) => {
   const record = searchHistory.value[index];
-  
-  if (!record.searchId) {
+  if (!record) return;
+
+  const recordId = record.searchId ?? record.id ?? record.search_id;
+  const userId = getCurrentUserId();
+
+  try {
+    let res: any = null;
+    let deleted = !recordId && !userId;
+    if (recordId) {
+      res = await deleteSearchRecordById(recordId);
+      deleted = res?.code === undefined || res.code === 200;
+    }
+
+    if (!deleted && userId && record.searchContent) {
+      res = await deleteSearchRecordByContent(userId, record.searchContent);
+      deleted = res?.code === undefined || res.code === 200;
+    }
+
+    if (!deleted) {
+      throw new Error(res.msg || '删除搜索记录失败');
+    }
+
     searchHistory.value.splice(index, 1);
     updateLocalSearchHistory();
-    return;
-  }
-
-  if (confirm('确定要删除这条搜索记录吗？')) {
-    try {
-      // 调用后端API删除记录
-      await deleteSearchRecordById(record.searchId);
-      
-      // 从数组中移除该记录
-      searchHistory.value.splice(index, 1);
-      
-      // 更新本地存储
-      updateLocalSearchHistory();
-      
-      console.log('搜索记录删除成功');
-      // ElMessage.success('搜索记录删除成功');
-    } catch (error) {
-      console.error('删除搜索记录失败:', error);
-      // 可选：显示错误消息
-      // ElMessage.error('删除搜索记录失败，请稍后重试');
-      alert('删除搜索记录失败，请稍后重试');
-    }
+  } catch (error) {
+    console.error('删除搜索记录失败:', error);
   }
 };
 
@@ -1532,14 +1502,24 @@ const getCategories = async () => {
 };
 
 // 接收 post 参数，并用后端结果覆盖
+const unwrapForumMutationResponse = (res: any) => {
+  const body = res?.code !== undefined ? res : res?.data;
+  return {
+    code: body?.code,
+    data: body?.data || {},
+    msg: body?.msg
+  };
+};
+
 const likePost = async (post: Post) => {
   try {
     const res = await togglePostLike(post.postId);
-    if (res.data.code === 200) {
+    const { code, data } = unwrapForumMutationResponse(res);
+    if (code === 200) {
       // 使用 Object.assign 确保Vue响应性更新
       Object.assign(post, {
-        liked: res.data.data.liked,
-        likeCount: res.data.data.likeCount
+        liked: data.liked,
+        likeCount: data.likeCount
       });
       
       // 强制触发UI更新
@@ -1566,11 +1546,12 @@ const likePost = async (post: Post) => {
 const favoritePost = async (post: Post) => {
   try {
     const res = await togglePostFavorite(post.postId);
-    if (res.data.code === 200) {
+    const { code, data } = unwrapForumMutationResponse(res);
+    if (code === 200) {
       // 使用 Object.assign 确保Vue响应性更新
       Object.assign(post, {
-        favorited: res.data.data.favorited,
-        favoriteCount: res.data.data.favoriteCount
+        favorited: data.favorited,
+        favoriteCount: data.favoriteCount
       });
       
       // 强制触发UI更新
@@ -1788,11 +1769,15 @@ onMounted(async  () => {
   loadStaus()
 
    // 读取上次保存的侧边栏状态
-  const savedCollapsed = localStorage.getItem('bothSidebarsCollapsed');
-  if (savedCollapsed === 'true') {
-    bothSidebarsCollapsed.value = true;
+  const savedLeftVisible = localStorage.getItem(SIDEBAR_LEFT_VISIBLE_KEY);
+  const savedRightVisible = localStorage.getItem(SIDEBAR_RIGHT_VISIBLE_KEY);
+  if (savedLeftVisible !== null || savedRightVisible !== null) {
+    sidebarLeftVisible.value = savedLeftVisible !== 'false';
+    sidebarRightVisible.value = savedRightVisible !== 'false';
+  } else if (localStorage.getItem('bothSidebarsCollapsed') === 'true') {
     sidebarLeftVisible.value = false;
     sidebarRightVisible.value = false;
+    saveSidebarState();
   }
   // 先加载分类数据，再加载推荐帖子
   getCategories().then(async () => {

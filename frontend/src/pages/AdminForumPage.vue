@@ -340,7 +340,23 @@ const loadCategories = async () => {
 
 const getCategoryName = (id: number) => { const cat = categories.value.find(c => c.id === id); return cat ? cat.name : (id === 0 ? '默认话题' : `话题${id}`); };
 const calculateStats = () => { forumStats.value = { totalPosts: posts.value.length, pendingPosts: posts.value.filter(p => p.status === 0).length, approvedPosts: posts.value.filter(p => p.status === 1).length } }
-const handleDelete = async (post: any) => { try { await ElMessageBox.confirm('确定删除吗？', '警告'); await deletePostAPI(post.postId); loadPosts(); } catch {} }
+const handleDelete = async (post: any) => {
+  try {
+    await ElMessageBox.confirm('确定删除吗？', '警告');
+    const res = await deletePostAPI(post.postId);
+    if (res.code !== 200) {
+      ElMessage.error(res.msg || '删除失败');
+      return;
+    }
+    posts.value = posts.value.filter(item => item.postId !== post.postId);
+    calculateStats();
+    ElMessage.success('已删除');
+  } catch (error: any) {
+    if (error !== 'cancel' && error !== 'close') {
+      ElMessage.error('删除失败');
+    }
+  }
+}
 const viewPostDetail = (post: any) => { selectedPost.value = post; showPostDetailModal.value = true; }
 const prevPage = () => { if (currentPage.value > 1) currentPage.value-- }
 const nextPage = () => { if (currentPage.value * pageSize.value < filteredPosts.value.length) currentPage.value++ }

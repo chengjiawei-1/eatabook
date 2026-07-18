@@ -53,6 +53,8 @@ interface ForumCategory {
 // 搜索记录类型
 interface ForumSearchRecord {
   searchId?: number;
+  id?: number;
+  search_id?: number;
   userId: number;
   searchContent: string;
   searchTime?: string;

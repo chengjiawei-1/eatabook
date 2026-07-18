@@ -81,7 +81,7 @@
             <h2 class="text-2xl font-bold text-amber-800 dark:text-amber-300" style="font-family: 'Noto Serif SC', serif">
               {{ isDefaultFilter ? "全部食疗方" : "搜索结果" }}
             </h2>
-            <span class="text-sm text-amber-600 dark:text-amber-400">共找到 {{ filteredRecipes.length }} 个食疗方</span>
+            <span class="text-sm text-amber-600 dark:text-amber-400">共找到 {{ total }} 个食疗方</span>
           </div>
 
           <!-- 加载中 -->
@@ -385,7 +385,7 @@ const selectedSeason = ref("全部");
 const selectedEfficacy = ref("全部");
 
 // 计算总页数
-const totalPages = computed(() => Math.ceil(total.value / pageSize.value));
+const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)));
 
 //工具方法
 const normalizeCover = (url?: string) => {
@@ -464,12 +464,7 @@ async function fetchRecipes() {
 
 // 计算属性
 const filteredRecipes = computed(() => {
-  if (!submittedSearchTerm.value) return recipes.value;
-  return recipes.value.filter(r =>
-    r.name.includes(submittedSearchTerm.value) ||
-    r.description.includes(submittedSearchTerm.value) ||
-    r.efficacy.includes(submittedSearchTerm.value)
-  );
+  return recipes.value;
 });
 const isDefaultFilter = computed(() => 
     selectedCategory.value === "全部" && 
@@ -496,6 +491,7 @@ function handleSearch() {
 
 function resetFilters() {
   searchTerm.value = "";
+  submittedSearchTerm.value = "";
   selectedCategory.value = "全部";
   selectedSeason.value = "全部";
   selectedEfficacy.value = "全部";

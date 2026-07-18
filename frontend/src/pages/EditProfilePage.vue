@@ -250,13 +250,12 @@ const handleAvatarChange = async (event: Event) => {
 
   const uploadData = new FormData();
   uploadData.append('file', file);
-  uploadData.append('userId', formData.value.userId);
 
   try {
     const res = await uploadAvatarAPI(uploadData);
     if (res && res.code === 200 && res.url) {
       formData.value.avatarUrl = getAvatarUrl(res.url);  // 使用统一的图片处理函数
-      alert("头像上传成功");
+      alert("头像已选择，请点击保存修改后生效");
     } else {
       alert(res?.msg || "头像上传失败");
     }
