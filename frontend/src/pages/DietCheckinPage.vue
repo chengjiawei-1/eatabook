@@ -327,7 +327,7 @@ import Footer from "@/components/Footer.vue";
 import { useAuthStore } from "@/stores/auth";
 import { getUserInfoAPI, addUserPoints } from "@/api/user"; // 引入加分接口
 import { selectByUserIdForArgentAPI } from "@/api/constitution";
-import { chatStructured } from "@/api/dify";
+import { chatStructured } from "@/api/ai";
 import { getDishById } from "@/api/dishes";
 import { useRouter } from 'vue-router';
 import { getSeasonalWisdomAPI } from "@/api/seasonal";
@@ -509,7 +509,7 @@ const getAiPlan = async () => {
       }
     }
 
-    // 缓存失效或不存在，请求 Dify 生成新计划
+    // 缓存失效或不存在，请求 AI 生成新计划
     console.log("☁️ 缓存失效或体质变更，请求 AI 生成新计划...");
     const askData = {
       primary: currentConst,

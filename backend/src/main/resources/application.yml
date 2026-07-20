@@ -2,13 +2,23 @@ server:
   port: ${SERVER_PORT:8081}
 
 spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+      - optional:file:backend/.env[.properties]
+
   ai:
     openai:
-      api-key: ${DOUBAO_API_KEY:}
-      base-url: ${DOUBAO_BASE_URL:https://ark.cn-beijing.volces.com/api/v3}
+      api-key: ${SILICONFLOW_API_KEY:}
+      base-url: ${SILICONFLOW_BASE_URL:https://api.siliconflow.cn/v1}
+      chat:
+        completions-path: ${SILICONFLOW_CHAT_COMPLETIONS_PATH:/chat/completions}
+        options:
+          model: ${AI_CHAT_DEFAULT_MODEL:}
       image:
         options:
-          model: ${DOUBAO_IMAGE_MODEL:}
+          model: ${AI_IMAGE_MODEL:}
 
   # ==============================
   # RabbitMQ
@@ -75,33 +85,48 @@ mybatis:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
 # ==============================
-# Dify
+# AI gateway
 # ==============================
-dify:
-  base-url: ${DIFY_BASE_URL:https://api.dify.ai/v1}
-  agents:
-    translator:
-      api-key: ${DIFY_TRANSLATOR_API_KEY:}
-      prefix: "请将以下的【古籍原文】改写为一段自然流利的长文本:"
-    suggester:
-      api-key: ${DIFY_SUGGESTER_API_KEY:}
-      prefix: "以下是用户的体质信息，请给出回复建议"
-    projecter:
-      api-key: ${DIFY_PROJECTER_API_KEY:}
-      prefix: "以下是用户信息，帮我给出七日食谱计划"
-    changeanalysis:
-      api-key: ${DIFY_CHANGEANALYSIS_API_KEY:}
-      prefix: "你帮我根据本周期的体质转换分数据，给出相应的分析建议"
-    laoji:
-      api-key: ${DIFY_LAOJI_API_KEY:}
-      prefix: "老己啊，" # 给智能体的全局前缀，强化角色感知
+ai:
+  gateway:
+    scenes:
+      ancient-text-translation:
+        template: classpath:/ai/prompts/ancient-text-translation.st
+        provider: siliconflow
+        model: ${AI_ANCIENT_TRANSLATION_MODEL:deepseek-ai/DeepSeek-V3}
+        output: text
+        temperature: ${AI_ANCIENT_TRANSLATION_TEMPERATURE:0.2}
+        top-p: ${AI_ANCIENT_TRANSLATION_TOP_P:0.8}
+        max-tokens: ${AI_ANCIENT_TRANSLATION_MAX_TOKENS:2048}
+      constitution-analysis:
+        template: classpath:/ai/prompts/constitution-analysis.st
+      diet-therapy-plan:
+        template: classpath:/ai/prompts/diet-therapy-plan.st
+      constitution-change-analysis:
+        template: classpath:/ai/prompts/constitution-change-analysis.st
+      diet-therapy-qa:
+        template: classpath:/ai/prompts/diet-therapy-qa.st
+      culinary-image-storyboard:
+        template: classpath:/ai/prompts/culinary-image-storyboard.st
+      culinary-step-image:
+        template: classpath:/ai/prompts/culinary-step-image.st
+    image:
+      count: ${AI_IMAGE_COUNT:1}
+      max-images: ${AI_IMAGE_MAX_IMAGES:4}
+      size: ${AI_IMAGE_SIZE:2K}
+      response-format: ${AI_IMAGE_RESPONSE_FORMAT:url}
+      step-delay-millis: ${AI_IMAGE_STEP_DELAY_MILLIS:1000}
+    audio:
+      enabled: ${AI_AUDIO_ENABLED:false}
+      model: ${AI_AUDIO_MODEL:}
+      voice: ${AI_AUDIO_VOICE:}
 
 # ==============================
 # 文件上传访问路径
 # ==============================
 file:
   base-url: ${FILE_BASE_URL:http://localhost:8081}
-  upload-dir: ${FILE_UPLOAD_DIR:./uploads/}
+  upload-dir: ${FILE_UPLOAD_DIR:${user.dir}/uploads/}
 
 # ==============================
 # Neo4j

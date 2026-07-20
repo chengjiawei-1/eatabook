@@ -27,7 +27,7 @@ public class UserMealPlanController {
         return userMealPlanService.getMealPlan(userId, currentConstitution);
     }
 
-    //保存从Dify生成的新计划
+    //保存从 AI 生成的新计划
     @Operation(summary = "保存/更新计划", description = "当AI生成新计划后调用此接口存入数据库")
     @PostMapping
     public String savePlan(@RequestBody Map<String, Object> params) {

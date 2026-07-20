@@ -92,7 +92,22 @@ public interface ForumPostMapper {
             @Param("pageSize") Integer pageSize);
 
     //删除帖子
-    @Update("UPDATE forum_post SET status = 0 WHERE post_id = #{postId}")
+    @Delete("DELETE FROM forum_comment_like WHERE comment_id IN (SELECT comment_id FROM forum_comment WHERE post_id = #{postId})")
+    int deleteCommentLikesByPostId(@Param("postId") Integer postId);
+
+    @Delete("DELETE FROM forum_comment WHERE post_id = #{postId}")
+    int deleteCommentsByPostId(@Param("postId") Integer postId);
+
+    @Delete("DELETE FROM forum_post_like WHERE post_id = #{postId}")
+    int deletePostLikesByPostId(@Param("postId") Integer postId);
+
+    @Delete("DELETE FROM forum_post_favorite WHERE post_id = #{postId}")
+    int deletePostFavoritesByPostId(@Param("postId") Integer postId);
+
+    @Delete("DELETE FROM forum_post_image WHERE post_id = #{postId}")
+    int deleteImagesByPostId(@Param("postId") Integer postId);
+
+    @Delete("DELETE FROM forum_post WHERE post_id = #{postId}")
     int deletePost(@Param("postId") Integer postId);
 
     //查询用户帖子

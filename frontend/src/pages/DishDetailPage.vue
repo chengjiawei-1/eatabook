@@ -405,7 +405,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { useRoute, RouterLink, useRouter } from "vue-router";
-import { chatStream } from "@/api/dify";
+import { chatStream, chatStructured } from "@/api/ai";
 import Nav from "@/components/Nav.vue";
 import Footer from "@/components/Footer.vue";
 import { getDishById } from "@/api/dishes";
@@ -440,6 +440,7 @@ const activeIngredient = ref<any>(null);
 const isTranslating = ref(false);
 const showTranslation = ref(false);
 const translationResult = ref("");
+const translationFailed = ref(false);
 
 const splitTranslation = ref({
   summary: '',     // + 现代解析
@@ -450,6 +451,43 @@ const splitTranslation = ref({
   keyFocus: '文火慢炖', // 默认占位
   tips: '暂无额外提示'   // 默认占位
 });
+
+const parseTranslationText = (text: string) => {
+  text = stripMarkdownStars(text);
+  const extract = (regex: RegExp) => {
+    const match = text.match(regex);
+    return match ? match[1].trim() : "";
+  };
+
+  splitTranslation.value.summary = extract(/【解析】([\s\S]*?)(?=【|$)/);
+  splitTranslation.value.ingredients = extract(/【食材】([\s\S]*?)(?=【|$)/);
+  splitTranslation.value.method = extract(/【造法】([\s\S]*?)(?=【|$)/);
+  splitTranslation.value.theory = extract(/【理法】([\s\S]*?)(?=【|$)/);
+  if (/AI 服务请求过于频繁|AI 服务调用失败/.test(text)) {
+    translationFailed.value = true;
+    if (!splitTranslation.value.summary) {
+      splitTranslation.value.summary = text.trim();
+    }
+  }
+
+  const highlights = extract(/【要点】([\s\S]*?)(?=【|$)/);
+  if (highlights) {
+    const diffMatch = highlights.match(/难度\|(\d)/);
+    if (diffMatch) splitTranslation.value.difficulty = parseInt(diffMatch[1]);
+
+    const keyMatch = highlights.match(/关键\|(.*?)(?=提示|难度|\n|$)/);
+    if (keyMatch) {
+      splitTranslation.value.keyFocus = keyMatch[1].trim().replace(/[|]$|提示$/, '');
+    }
+
+    const tipMatch = highlights.match(/提示\|([\s\S]*)/);
+    if (tipMatch) {
+      splitTranslation.value.tips = tipMatch[1].trim();
+    }
+  }
+};
+
+const stripMarkdownStars = (text: string) => text.replace(/\*/g, '');
 
 // 动态返回逻辑
 const getBackButtonText = () => {
@@ -624,71 +662,53 @@ const normalizeCover = (url?: string) => {
 // AI 翻译逻辑
 const handleTranslate = async () => {
   if (!dish.value?.nutrition) return;
-  if (translationResult.value && !isTranslating.value) {
+  if (translationResult.value && !isTranslating.value && !translationFailed.value) {
     showTranslation.value = !showTranslation.value;
     return;
   }
   
   showTranslation.value = true;
   translationResult.value = "";
+  translationFailed.value = false;
   isTranslating.value = true;
 
   // 每次翻译前先清空旧内容
   splitTranslation.value = { summary: '', ingredients: '', method: '', theory: '', difficulty: 0, keyFocus: '文火慢炖', tips: '暂无额外提示' };
 
-  // 给 AI 的提示词，强制它按格式输出，方便前端拆
- const prompt = `你是一位精通中医养生专家。请将古籍内容解析为现代白话，必须严格按下述格式输出：
-【解析】内容...
-【食材】内容...
-【造法】内容...
-【理法】内容...
-【要点】
-难度|3
-关键|文火慢炖
-提示|...内容...
-古籍内容：\n${dish.value.nutrition}`;
+  const prompt = dish.value.nutrition;
 
   try {
-    // 使用流式接口，一边返回一边显示
-    // 在 handleTranslate 的 onMessage 回调里
     await chatStream(
-      {
-        agent: "translator",
-        prompt
-      },
+      { agent: "translator", prompt },
       (chunk) => {
         translationResult.value += chunk;
-        const text = translationResult.value;
-
-      const extract = (regex: RegExp) => {
-        const match = text.match(regex);
-        return match ? match[1].trim() : "";
-      };
-
-      splitTranslation.value.summary = extract(/【解析】([\s\S]*?)(?=【|$)/);
-      splitTranslation.value.ingredients = extract(/【食材】([\s\S]*?)(?=【|$)/);
-      splitTranslation.value.method = extract(/【造法】([\s\S]*?)(?=【|$)/);
-      splitTranslation.value.theory = extract(/【理法】([\s\S]*?)(?=【|$)/);
-
-      const highlights = extract(/【要点】([\s\S]*?)(?=【|$)/);
-      if (highlights) {
-        const diffMatch = highlights.match(/难度\|(\d)/);
-        if (diffMatch) splitTranslation.value.difficulty = parseInt(diffMatch[1]);
-
-        // 使用 [^提示\n]* 表示匹配不包含“提示”和“换行”的任意字符
-        const keyMatch = highlights.match(/关键\|(.*?)(?=提示|难度|\n|$)/);
-        if (keyMatch) {
-          splitTranslation.value.keyFocus = keyMatch[1].trim().replace(/[|]$|提示$/, ''); 
-        }
-
-        const tipMatch = highlights.match(/提示\|([\s\S]*)/);
-        if (tipMatch) {
-          splitTranslation.value.tips = tipMatch[1].trim();
-        }
+        parseTranslationText(translationResult.value);
       }
-    });
+    );
+
+    if (translationFailed.value) {
+      ElMessage.warning("流式输出受限，正在切换为稳定模式");
+      const response = await chatStructured("translator", prompt);
+      const text = typeof response === "string" ? response : String((response as any)?.data ?? response ?? "");
+      translationFailed.value = false;
+      translationResult.value = text;
+      parseTranslationText(text);
+    }
   } catch (error) {
-    console.error("翻译出错:", error);
+    console.warn("流式翻译失败，尝试同步兜底:", error);
+    try {
+      const response = await chatStructured("translator", prompt);
+      const text = typeof response === "string" ? response : String((response as any)?.data ?? response ?? "");
+      translationFailed.value = false;
+      translationResult.value = text;
+      parseTranslationText(text);
+    } catch (fallbackError) {
+      console.error("翻译出错:", fallbackError);
+      translationFailed.value = true;
+      const message = fallbackError instanceof Error ? fallbackError.message : "AI 服务调用失败，请稍后重试。";
+      splitTranslation.value.summary = message;
+      ElMessage.error(message);
+    }
   } finally {
     isTranslating.value = false;
   }
@@ -707,6 +727,7 @@ const handleGenerateStepImages = async () => {
     .filter(s => s.trim());
 const payload = {
   dishName: dish.value?.name,
+  sourceText: translationResult.value || splitTranslation.value.method,
   stepsText: stepsArray
 };
 

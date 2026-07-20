@@ -3,6 +3,7 @@ package com.example.springboot.controller;
 import com.example.springboot.entity.User;
 import com.example.springboot.req.LoginReq;
 import com.example.springboot.service.UserService;
+import com.example.springboot.utils.FileUploadUtils;
 import com.example.springboot.utils.JwtUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,8 +16,9 @@ import com.example.springboot.utils.CommonConstant;
 import java.time.format.DateTimeFormatter;
 
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -76,14 +78,12 @@ public class UserController {
             String fileName = UUID.randomUUID().toString() + fileExtension;
 
             //创建目录
-            File avatarDir = new File(uploadDir + "avatar/");
-            if (!avatarDir.exists()) {
-                avatarDir.mkdirs();
-            }
+            Path avatarDir = FileUploadUtils.uploadSubdir(uploadDir, "avatar");
+            Files.createDirectories(avatarDir);
 
             //保存文件
-            File dest = new File(avatarDir, fileName);
-            file.transferTo(dest);
+            Path dest = avatarDir.resolve(fileName);
+            file.transferTo(dest.toFile());
 
             //生成访问URL
             String url = baseUrl + "/uploads/avatar/" + fileName;

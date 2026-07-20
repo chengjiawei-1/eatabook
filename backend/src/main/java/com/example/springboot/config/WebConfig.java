@@ -1,6 +1,7 @@
 package com.example.springboot.config;
 
 import com.example.springboot.interceptor.LoginInterceptor;
+import com.example.springboot.utils.FileUploadUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,9 +34,13 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
 
-        System.out.println("文件上传目录: " + uploadDir);
+        String uploadLocation = FileUploadUtils.uploadRoot(uploadDir).toUri().toString();
+        if (!uploadLocation.endsWith("/")) {
+            uploadLocation += "/";
+        }
+        System.out.println("文件上传目录: " + uploadLocation);
 
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:" + uploadDir);
+                .addResourceLocations(uploadLocation);
     }
 }

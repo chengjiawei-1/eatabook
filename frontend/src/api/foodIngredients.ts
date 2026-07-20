@@ -18,7 +18,7 @@ export async function findIngredientsByDishId(dishId: number): Promise<FoodIngre
   try {
     // 使用 httpInstance.get
     const res = await httpInstance.get(`/api/food-ingredients/dishes/${dishId}`);
-    return res.data || res;
+    return normalizeIngredientList(res.data || res);
   } catch (err) {
     console.error("findIngredientsByDishId error:", err);
     return [];
@@ -59,7 +59,7 @@ export async function importIngredientBookRel(file: File): Promise<string | null
 export async function findAllIngredients(): Promise<FoodIngredients[]> {
   try {
     const res = await httpInstance.get(`/api/food-ingredients`);
-    return res.data || res;
+    return normalizeIngredientList(res.data || res);
   } catch (err) {
     console.error("findAllIngredients error:", err);
     return [];
@@ -136,9 +136,29 @@ export async function getIngredientsByChapterAll(chapterId: number): Promise<Foo
   try {
     const res = await httpInstance.get(`/api/food-ingredients/chapters/${chapterId}`);
     // 根据你的 httpInstance 封装，可能直接返回 res 或 res.data
-    return res.data || res;
+    return normalizeIngredientList(res.data || res);
   } catch (err) {
     console.error("getIngredientsByChapterAll error:", err);
     return [];
   }
+}
+
+function normalizeIngredientList(value: any): FoodIngredients[] {
+  return Array.isArray(value) ? value.map(normalizeIngredient) : [];
+}
+
+function normalizeIngredient(ingredient: FoodIngredients): FoodIngredients {
+  return {
+    ...ingredient,
+    ingredientName: stripMarkdownStars(ingredient.ingredientName),
+    alias: stripMarkdownStars(ingredient.alias),
+    property: stripMarkdownStars(ingredient.property),
+    category: stripMarkdownStars(ingredient.category),
+    ancientEffect: stripMarkdownStars(ingredient.ancientEffect),
+    ancientOriginText: stripMarkdownStars(ingredient.ancientOriginText),
+  };
+}
+
+function stripMarkdownStars(value?: string): string | undefined {
+  return value?.replace(/\*/g, '');
 }

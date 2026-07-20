@@ -1,44 +1,40 @@
-//语义驱动，而不是 HTTP 方法驱动
 import httpInstance from "@/utils/http";
+
 const API_BASE_URL = "/api/ai";
 
-// 通用类型
 export interface ChatPayload {
-  agent: string;            // 智能体标识，如 translator / constitution
-  prompt: string;           // 完整 prompt
-  meta?: Record<string, any>; // 可选扩展信息（schema / 场景 / tag）
+  agent?: string;
+  scene?: string;
+  prompt: string;
+  meta?: Record<string, any>;
 }
 
-//用途：问答 / 推荐 / 简单解释
-//用途：体质分析 / 评估 / 固定格式输出
 export async function chatStructured(agent: string, prompt: string) {
+  const payload: ChatPayload = {
+    agent,
+    prompt
+  };
+
   try {
-    const payload = {
-      agent: agent,
-      prompt: prompt
-    };
-
-    const res = await httpInstance.post('/api/ai/chat/structured', payload, {
-      timeout: 60000 
+    return await httpInstance.post(`${API_BASE_URL}/chat/structured`, payload, {
+      timeout: 60000
     });
-    console.log(res)
-
-    // 返回 res.data 给前端使用
-    return res;
-  } catch (err) {
-    console.error("[chatStructured] error:", err);
-    throw err;
+  } catch (error: any) {
+    const message = error?.response?.data?.message
+      || error?.response?.data?.error
+      || error?.response?.data
+      || error?.message
+      || "AI request failed";
+    throw new Error(String(message));
   }
 }
 
-//用途：翻译 / 长文生成 / 实时展示
 export async function chatStream(
   payload: ChatPayload,
   onChunk: (text: string) => void,
   onDone?: () => void
 ): Promise<void> {
   const token = localStorage.getItem("token");
-
   const controller = new AbortController();
   const signal = controller.signal;
 
@@ -55,11 +51,12 @@ export async function chatStream(
   });
 
   if (!response.ok) {
-    throw new Error(`Stream 请求失败: ${response.status}`);
+    const errorText = await response.text().catch(() => "");
+    throw new Error(`Stream request failed: ${response.status}${errorText ? ` - ${errorText}` : ""}`);
   }
 
   if (!response.body) {
-    throw new Error("Stream body 为空");
+    throw new Error("Stream body is empty");
   }
 
   const reader = response.body.getReader();

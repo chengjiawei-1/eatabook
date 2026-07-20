@@ -56,6 +56,7 @@ public class FoodIngredientsServiceImpl implements FoodIngredientsService {
                 // 转换与插入
                 FoodIngredients ingredient = new FoodIngredients();
                 BeanUtils.copyProperties(dto, ingredient);
+                sanitizeIngredient(ingredient);
 
                 ingredient.setUpdateTime(new Date());
 
@@ -74,6 +75,7 @@ public class FoodIngredientsServiceImpl implements FoodIngredientsService {
 
     @Override
     public int updateIngredients(Integer ingredientId, FoodIngredients foodIngredients){
+        sanitizeIngredient(foodIngredients);
         return foodIngredientsMapper.updateIngredientById(ingredientId,foodIngredients);
     }
 
@@ -81,21 +83,51 @@ public class FoodIngredientsServiceImpl implements FoodIngredientsService {
     public PageInfo<FoodIngredients> findIngredientsByPage(Integer pageNo, Integer pageSize, Integer chapterId) {
         PageHelper.startPage(pageNo, pageSize);
         List<FoodIngredients> list = foodIngredientsMapper.findIngredientsByChapterId(chapterId);
+        sanitizeIngredients(list);
         return new PageInfo<>(list);
     }
 
     @Override
     public List<FoodIngredients> findIngredientsByChapterId(Integer chapter_id) {
-        return foodIngredientsMapper.findIngredientsByChapterId(chapter_id);
+        List<FoodIngredients> list = foodIngredientsMapper.findIngredientsByChapterId(chapter_id);
+        sanitizeIngredients(list);
+        return list;
     }
 
     @Override
     public List<FoodIngredients> findIngredientsByDishId(Integer dish_id) {
-        return foodIngredientsMapper.findIngredientsByDishId(dish_id);
+        List<FoodIngredients> list = foodIngredientsMapper.findIngredientsByDishId(dish_id);
+        sanitizeIngredients(list);
+        return list;
     }
 
     @Override
     public List<FoodIngredients>findAll() {
-        return  foodIngredientsMapper.findAllIngredients();
+        List<FoodIngredients> list = foodIngredientsMapper.findAllIngredients();
+        sanitizeIngredients(list);
+        return list;
+    }
+
+    private void sanitizeIngredients(List<FoodIngredients> ingredients) {
+        if (ingredients == null) {
+            return;
+        }
+        ingredients.forEach(this::sanitizeIngredient);
+    }
+
+    private void sanitizeIngredient(FoodIngredients ingredient) {
+        if (ingredient == null) {
+            return;
+        }
+        ingredient.setIngredientName(stripMarkdownStars(ingredient.getIngredientName()));
+        ingredient.setAlias(stripMarkdownStars(ingredient.getAlias()));
+        ingredient.setProperty(stripMarkdownStars(ingredient.getProperty()));
+        ingredient.setCategory(stripMarkdownStars(ingredient.getCategory()));
+        ingredient.setAncientEffect(stripMarkdownStars(ingredient.getAncientEffect()));
+        ingredient.setAncientOriginText(stripMarkdownStars(ingredient.getAncientOriginText()));
+    }
+
+    private String stripMarkdownStars(String value) {
+        return value == null ? null : value.replace("*", "");
     }
 }

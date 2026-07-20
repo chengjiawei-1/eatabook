@@ -399,7 +399,7 @@ import { useAuthStore } from "@/stores/auth";
 // 引入你刚刚定义的 API
 import { submitTestAPI } from "@/api/constitution";
 import { getUserInfoAPI } from "@/api/user";
-import { chatStream  } from "@/api/dify"; // 假设你放在 utils 或 api 目录下
+import { chatStream  } from "@/api/ai";
 import { useRouter } from "vue-router";
 
 const getStructuredReport = (text: string) => {

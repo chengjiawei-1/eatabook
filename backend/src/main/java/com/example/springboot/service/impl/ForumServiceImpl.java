@@ -231,12 +231,18 @@ public class ForumServiceImpl implements ForumService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public int deletePost(Integer postId) {
         ForumPost post = postMapper.selectById(postId);
         if (post == null) {
             return 0;
         }
 
+        postMapper.deleteCommentLikesByPostId(postId);
+        postMapper.deleteCommentsByPostId(postId);
+        postMapper.deletePostLikesByPostId(postId);
+        postMapper.deletePostFavoritesByPostId(postId);
+        postMapper.deleteImagesByPostId(postId);
         int res = postMapper.deletePost(postId);
         return res;
     }

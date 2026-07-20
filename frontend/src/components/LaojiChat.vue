@@ -69,7 +69,7 @@
 
 <script setup lang="ts">
 import { ref, nextTick } from 'vue';
-import { chatStream } from '@/api/dify';
+import { chatStream } from '@/api/ai';
 
 const ipImageUrl = new URL('@/assets/images/argentip.png', import.meta.url).href;
 

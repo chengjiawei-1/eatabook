@@ -7,7 +7,7 @@
         v-model="stepsText"
         type="textarea"
         :rows="6"
-        placeholder="请粘贴 Dify 生成的【造法】内容，例如：1. 将肉切块 2. 慢炖..."
+        placeholder="请粘贴 AI 生成的【造法】内容，例如：1. 将肉切块 2. 慢炖..."
       />
       <el-button 
         type="primary" 
@@ -68,6 +68,7 @@ const handleStartGenerate = async () => {
 
     const res = await generateCulinaryImages({
       dishName: "测试菜品",
+      sourceText: stepsText.value,
       stepsText: stepsArray
     });
     

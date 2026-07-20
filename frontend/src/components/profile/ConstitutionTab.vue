@@ -182,7 +182,7 @@ import { useRouter } from 'vue-router';
 import * as echarts from 'echarts';
 import { useAuthStore } from '@/stores/auth';
 import { getHistoryAPI } from '@/api/constitution';
-import { chatStream } from '@/api/dify';
+import { chatStream } from '@/api/ai';
 import { setReminderAPI } from '@/api/user';
 import { getAnalysisCache, saveAnalysisCache } from '@/api/analysisCache';
 
@@ -225,21 +225,14 @@ const currentUserId = computed(() => auth.user?.userId);
 
 const buildAIMessage = (recent6: any[]) => {
   return `
-你是一名中医体质分析专家，请根据以下用户最近 6 次体质测试记录，
-分析其体质变化趋势、当前主要体质，并给出整体判断。
-
 数据说明：
-- testTime：测试时间
-- mainConstitution：主体质
-- constitutionConvertScores：九种体质分数（0-100）
+testTime 表示测试时间。
+mainConstitution 表示主体质。
+constitutionConvertScores 表示九种体质转化分，范围0至100。
+数据按时间正序排列，最后一条为第6次审计数据。
 
 最近 6 次测试数据如下（JSON）：
 ${JSON.stringify(recent6, null, 2)}
-
-请输出：
-1. 总体体质变化分析（一段话）
-2. 当前主要体质判断
-3. 体质变化趋势简述
 `;
 };
 

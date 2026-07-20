@@ -3,6 +3,7 @@ package com.example.springboot.controller;
 import com.example.springboot.entity.*;
 import com.example.springboot.service.ForumService;
 import com.example.springboot.service.NotificationService;
+import com.example.springboot.utils.FileUploadUtils;
 import com.example.springboot.utils.JwtUtils;
 import com.example.springboot.utils.NotificationUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,8 +13,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -379,11 +381,8 @@ public class ForumController {
         try {
 
             // 上传目录
-            File dir = new File(uploadDir + "forum/");
-
-            if (!dir.exists()) {
-                dir.mkdirs();
-            }
+            Path dir = FileUploadUtils.uploadSubdir(uploadDir, "forum");
+            Files.createDirectories(dir);
 
             List<String> urls = new ArrayList<>();
 
@@ -398,9 +397,9 @@ public class ForumController {
                                 ? originalFilename
                                 : "temp.jpg");
 
-                File dest = new File(dir, fileName);
+                Path dest = dir.resolve(fileName);
 
-                file.transferTo(dest);
+                file.transferTo(dest.toFile());
 
                 // 返回图片访问地址
                 String imageUrl =
