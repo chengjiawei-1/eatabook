@@ -41,7 +41,7 @@ public class CulinaryImageServiceImpl implements CulinaryImageService {
                                            List<String> stepsText,
                                            Integer maxImages) {
         List<String> imagePrompts = planImagePrompts(dishName, sourceText, stepsText, maxImages);
-        return generateImagesFromPrompts(dishName, imagePrompts);
+        return generateImagesFromPrompts(dishName, imagePrompts, maxImages);
     }
 
     private List<String> planImagePrompts(String dishName,
@@ -77,23 +77,25 @@ public class CulinaryImageServiceImpl implements CulinaryImageService {
         }
     }
 
-    private List<String> generateImagesFromPrompts(String dishName, List<String> imagePrompts) {
-        List<String> imageUrls = new ArrayList<>();
-        for (String imagePrompt : imagePrompts) {
-            try {
-                List<String> generated = aiGatewayService.generateImages(
-                        AiScene.CULINARY_STEP_IMAGE,
-                        imagePrompt,
-                        Map.of("dishName", clean(dishName), "step", imagePrompt)
-                );
-                imageUrls.add(generated.isEmpty() ? IMAGE_GEN_FAILED : generated.get(0));
-                waitBetweenSteps();
-            } catch (Exception e) {
-                imageUrls.add(IMAGE_GEN_FAILED);
-            }
+    private List<String> generateImagesFromPrompts(String dishName, List<String> imagePrompts, Integer maxImages) {
+        if (imagePrompts == null || imagePrompts.isEmpty()) {
+            return List.of();
         }
 
-        return imageUrls;
+        String prompt = buildSequentialImagePrompt(dishName, imagePrompts);
+        try {
+            return aiGatewayService.generateImages(
+                    AiScene.CULINARY_STEP_IMAGE,
+                    prompt,
+                    Map.of(
+                            "dishName", clean(dishName),
+                            "step", prompt,
+                            "maxImages", resolveMaxImages(maxImages)
+                    )
+            );
+        } catch (Exception e) {
+            return List.of(IMAGE_GEN_FAILED);
+        }
     }
 
     private List<String> parseStoryboardPrompts(String storyboard, Integer maxImages) throws Exception {
@@ -172,6 +174,17 @@ public class CulinaryImageServiceImpl implements CulinaryImageService {
 
     private String clean(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private String buildSequentialImagePrompt(String dishName, List<String> imagePrompts) {
+        String title = hasText(dishName) ? clean(dishName) : "古籍菜品";
+        String steps = "";
+        for (int i = 0; i < imagePrompts.size(); i++) {
+            steps += (i + 1) + ". " + imagePrompts.get(i).trim() + "\n";
+        }
+        return "生成一组共" + imagePrompts.size() + "张连贯的中国古籍菜品制作步骤图，菜名：" + title
+                + "。所有图片必须保持同一菜品、同一食材、同一中式厨房环境、同一写实美食摄影风格；按烹饪时间顺序展示，不要提前出现后续成品状态。分镜如下：\n"
+                + steps.trim();
     }
 
     private void waitBetweenSteps() throws InterruptedException {

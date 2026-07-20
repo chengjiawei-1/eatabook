@@ -104,17 +104,38 @@ ai:
         template: classpath:/ai/prompts/diet-therapy-plan.st
       constitution-change-analysis:
         template: classpath:/ai/prompts/constitution-change-analysis.st
+        provider: siliconflow
+        model: ${AI_CONSTITUTION_CHANGE_MODEL:deepseek-ai/DeepSeek-V3}
+        output: text
+        temperature: ${AI_CONSTITUTION_CHANGE_TEMPERATURE:0.2}
+        top-p: ${AI_CONSTITUTION_CHANGE_TOP_P:0.8}
+        max-tokens: ${AI_CONSTITUTION_CHANGE_MAX_TOKENS:2048}
       diet-therapy-qa:
         template: classpath:/ai/prompts/diet-therapy-qa.st
       culinary-image-storyboard:
         template: classpath:/ai/prompts/culinary-image-storyboard.st
+        provider: siliconflow
+        model: ${AI_CULINARY_STORYBOARD_MODEL:deepseek-ai/DeepSeek-V3}
+        output: text
+        temperature: ${AI_CULINARY_STORYBOARD_TEMPERATURE:0.2}
+        top-p: ${AI_CULINARY_STORYBOARD_TOP_P:0.8}
+        max-tokens: ${AI_CULINARY_STORYBOARD_MAX_TOKENS:2048}
       culinary-step-image:
         template: classpath:/ai/prompts/culinary-step-image.st
+        provider: volcengine-ark
+        model: ${ARK_IMAGE_MODEL:doubao-seedream-4-5-251128}
+        output: image
     image:
+      api-key: ${ARK_API_KEY:}
+      base-url: ${ARK_BASE_URL:https://ark.cn-beijing.volces.com/api/v3}
+      model: ${ARK_IMAGE_MODEL:doubao-seedream-4-5-251128}
       count: ${AI_IMAGE_COUNT:1}
       max-images: ${AI_IMAGE_MAX_IMAGES:4}
       size: ${AI_IMAGE_SIZE:2K}
       response-format: ${AI_IMAGE_RESPONSE_FORMAT:url}
+      stream: ${AI_IMAGE_STREAM:true}
+      watermark: ${AI_IMAGE_WATERMARK:true}
+      sequential-image-generation: ${AI_IMAGE_SEQUENTIAL_GENERATION:auto}
       step-delay-millis: ${AI_IMAGE_STEP_DELAY_MILLIS:1000}
     audio:
       enabled: ${AI_AUDIO_ENABLED:false}

@@ -29,10 +29,16 @@ public class AiGatewayProperties {
 
     @Data
     public static class ImageProperties {
+        private String apiKey = "";
+        private String baseUrl = "https://ark.cn-beijing.volces.com/api/v3";
+        private String model = "doubao-seedream-4-5-251128";
         private Integer count = 1;
         private Integer maxImages = 4;
         private String size = "2K";
         private String responseFormat = "url";
+        private boolean stream = true;
+        private boolean watermark = true;
+        private String sequentialImageGeneration = "auto";
         private Long stepDelayMillis = 1000L;
     }
 
