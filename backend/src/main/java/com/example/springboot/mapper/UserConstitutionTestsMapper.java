@@ -12,6 +12,9 @@ public interface UserConstitutionTestsMapper extends BaseMapper<UserConstitution
     @Select("SELECT * FROM user_constitution_tests WHERE user_id = #{userId} ORDER BY test_time DESC")
     List<UserConstitutionTests> selectHistoryByUserId(Integer userId);
 
+    @Select("SELECT * FROM user_constitution_tests WHERE user_id = #{userId} ORDER BY test_time DESC LIMIT 1")
+    UserConstitutionTests selectLatestByUserId(Integer userId);
+
     @Select("SELECT * FROM user_constitution_tests WHERE user_id = #{userId} ORDER BY test_time ASC")
     List<UserConstitutionTests> selectByUserIdForArgent(Integer userId);
 

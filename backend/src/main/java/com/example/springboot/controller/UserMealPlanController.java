@@ -1,6 +1,7 @@
 package com.example.springboot.controller;
 
 import com.example.springboot.service.UserMealPlanService;
+import com.example.springboot.service.DietTherapyPlanGenerationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,9 @@ public class UserMealPlanController {
 
     @Autowired
     private UserMealPlanService userMealPlanService;
+
+    @Autowired
+    private DietTherapyPlanGenerationService dietTherapyPlanGenerationService;
 
     //获取有效的食疗计划
     @Operation(summary = "获取有效计划", description = "校验日期和体质，命中则返回JSON，否则返回null")
@@ -42,5 +46,19 @@ public class UserMealPlanController {
             e.printStackTrace();
             return "error";
         }
+    }
+
+    @Operation(summary = "生成七天食疗计划", description = "读取用户资料和最新体质测试，结合 RAG 菜品知识库生成 7 天早餐/午餐/晚餐 dish_id")
+    @PostMapping("/generate")
+    public Map<String, Object> generatePlan(@RequestBody GenerateMealPlanRequest request) {
+        return dietTherapyPlanGenerationService.generate(
+                request.userId(),
+                request.prompt(),
+                request.save(),
+                request.topK()
+        );
+    }
+
+    public record GenerateMealPlanRequest(Integer userId, String prompt, Boolean save, Integer topK) {
     }
 }

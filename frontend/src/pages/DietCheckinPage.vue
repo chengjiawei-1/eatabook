@@ -327,13 +327,12 @@ import Footer from "@/components/Footer.vue";
 import { useAuthStore } from "@/stores/auth";
 import { getUserInfoAPI, addUserPoints } from "@/api/user"; // 引入加分接口
 import { selectByUserIdForArgentAPI } from "@/api/constitution";
-import { chatStructured } from "@/api/ai";
 import { getDishById } from "@/api/dishes";
 import { useRouter } from 'vue-router';
 import { getSeasonalWisdomAPI } from "@/api/seasonal";
 import { searchCity, get7DayWeather } from "@/api/weather";
 import { ElNotification } from 'element-plus'; // 建议引入提示组件
-import { getValidMealPlan, saveMealPlan } from "@/api/plan";
+import { generateMealPlan, getValidMealPlan } from "@/api/plan";
 // 导入你提供的打卡与流水接口
 import { 
   insertCheckinApi, 
@@ -353,8 +352,13 @@ const initWeather = async () => {
   isWeatherLoading.value = true;
   try {
     // 使用 .trim() 确保没有多余空格，并增加兜底字符串防止传 null 触发 400
-    const rawLocation = myInfo.value?.city || myInfo.value?.nativePlace;
-    const locationQuery = rawLocation.trim() ;
+    const rawLocation = myInfo.value?.city || myInfo.value?.nativePlace || "";
+    const locationQuery = rawLocation.trim();
+    if (!locationQuery) {
+      console.warn("天气查询跳过：用户城市或籍贯为空");
+      weather.value = { text: "城市未设置", temp: 0 };
+      return;
+    }
 
     console.log("准备查询天气，当前城市:", locationQuery);
 
@@ -520,11 +524,15 @@ const getAiPlan = async () => {
       solarTerm: currentDayData.value.solarTerm
     };
 
-    const response = await chatStructured('projecter', JSON.stringify(askData));
+    const response = await generateMealPlan({
+      userId,
+      prompt: JSON.stringify(askData),
+      save: true,
+      topK: 20
+    });
     if (!response) return;
 
-    let finalData = response.data ? response.data : response;
-    if (typeof finalData === 'string') finalData = JSON.parse(finalData);
+    const finalData = response.plan || response;
 
     // 更新前端状态并同步到后端
     if (finalData && finalData.breakfast) {
@@ -537,7 +545,6 @@ const getAiPlan = async () => {
       await updateDailyMealsByDate(new Date(selectedDateStr.value));
 
       // 保存到后端，注意参数名要和后端 Controller 对应
-      await saveMealPlan(userId, JSON.stringify(finalData), currentConst);
       console.log("✅ AI 新计划已生成并锁定今日为起始日");
     }
 

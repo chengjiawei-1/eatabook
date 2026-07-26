@@ -12,6 +12,7 @@ declare module "d3" {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const backendTarget = env.VITE_DEV_SERVER_PROXY_TARGET || "http://localhost:8081";
+  const qweatherTarget = env.VITE_QWEATHER_API_HOST || "https://q46hexjuqx.re.qweatherapi.com";
 
   return {
     plugins: [vue(), tsconfigPaths()],
@@ -36,7 +37,7 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
         },
         "/weather-api": {
-          target: "https://q46hexjuqx.re.qweatherapi.com",
+          target: qweatherTarget,
           changeOrigin: true,
           rewrite: (proxyPath) => proxyPath.replace(/^\/weather-api/, ""),
         },

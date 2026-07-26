@@ -13,12 +13,27 @@ spring:
       api-key: ${SILICONFLOW_API_KEY:}
       base-url: ${SILICONFLOW_BASE_URL:https://api.siliconflow.cn/v1}
       chat:
+        api-key: ${SILICONFLOW_API_KEY:}
+        base-url: ${SILICONFLOW_BASE_URL:https://api.siliconflow.cn/v1}
         completions-path: ${SILICONFLOW_CHAT_COMPLETIONS_PATH:/chat/completions}
         options:
-          model: ${AI_CHAT_DEFAULT_MODEL:}
+          model: ${AI_CHAT_DEFAULT_MODEL:deepseek-ai/DeepSeek-V3}
+      embedding:
+        api-key: ${AI_EMBEDDING_API_KEY:${SILICONFLOW_API_KEY:}}
+        base-url: ${AI_EMBEDDING_BASE_URL:${SILICONFLOW_BASE_URL:https://api.siliconflow.cn/v1}}
+        embeddings-path: ${AI_EMBEDDING_PATH:/embeddings}
+        options:
+          model: ${AI_EMBEDDING_MODEL:BAAI/bge-m3}
       image:
         options:
           model: ${AI_IMAGE_MODEL:}
+    vectorstore:
+      chroma:
+        client:
+          host: ${CHROMA_HOST:http://localhost}
+          port: ${CHROMA_PORT:8000}
+        collection-name: ${CHROMA_COLLECTION_NAME:health_knowledge}
+        initialize-schema: ${CHROMA_INITIALIZE_SCHEMA:true}
 
   # ==============================
   # RabbitMQ
@@ -32,6 +47,7 @@ spring:
     listener:
       simple:
         acknowledge-mode: auto
+        auto-startup: ${RABBITMQ_LISTENER_AUTO_STARTUP:false}
 
   # ==============================
   # MySQL
@@ -75,6 +91,25 @@ spring:
     default-property-inclusion: always
     time-zone: GMT+8
     date-format: yyyy-MM-dd HH:mm:ss
+
+app:
+  rag:
+    knowledge-location: ${RAG_KNOWLEDGE_LOCATION:classpath*:knowledge/**/*}
+    index-on-startup: ${RAG_INDEX_ON_STARTUP:false}
+    fail-on-index-error: ${RAG_FAIL_ON_INDEX_ERROR:false}
+    clear-before-index: ${RAG_CLEAR_BEFORE_INDEX:false}
+    knowledge-base-id: ${RAG_KNOWLEDGE_BASE_ID:default}
+    index-batch-size: ${RAG_INDEX_BATCH_SIZE:25}
+    chunk:
+      default-chunk-size: ${RAG_CHUNK_SIZE:500}
+      min-chunk-size-chars: ${RAG_MIN_CHUNK_SIZE_CHARS:100}
+      max-chunk-size-chars: ${RAG_MAX_CHUNK_SIZE_CHARS:1200}
+      min-chunk-length-to-embed: ${RAG_MIN_CHUNK_LENGTH_TO_EMBED:5}
+      max-num-chunks: ${RAG_MAX_NUM_CHUNKS:10000}
+      keep-separator: ${RAG_KEEP_SEPARATOR:true}
+    search:
+      default-top-k: ${RAG_SEARCH_TOP_K:5}
+      default-similarity-threshold: ${RAG_SEARCH_SIMILARITY_THRESHOLD:0.0}
 
 # ==============================
 # MyBatis

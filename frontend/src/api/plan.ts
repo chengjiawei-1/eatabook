@@ -53,3 +53,12 @@ export async function saveMealPlan(userId: number, planJson: string, constitutio
     return false;
   }
 }
+
+export async function generateMealPlan(params: {
+  userId: number;
+  prompt?: string;
+  save?: boolean;
+  topK?: number;
+}): Promise<any> {
+  return httpInstance.post('/api/meal-plans/generate', params);
+}
