@@ -186,6 +186,21 @@ import { chatStream } from '@/api/ai';
 import { setReminderAPI } from '@/api/user';
 import { getAnalysisCache, saveAnalysisCache } from '@/api/analysisCache';
 
+const AI_FAILURE_MARKERS = [
+  "AI 服务请求过于频繁",
+  "AI 服务调用失败",
+  "Too Many Requests",
+  "rate limiting",
+  "System is too busy",
+  "Request was rejected",
+  "50609",
+  "429"
+];
+
+const isAiFailureText = (text: string) => {
+  return !!text && AI_FAILURE_MARKERS.some(marker => text.includes(marker));
+};
+
 const router = useRouter();
 const auth = useAuthStore();
 
@@ -287,6 +302,13 @@ async () => {
           .trim();
 
         // 最终赋值
+        if (isAiFailureText(processedContent)) {
+          aiAnalysisBuffer.value = "AI 分析暂时没有生成成功，请稍后刷新后再试。本次失败不会写入缓存。";
+          aiAnalysis.value.overallAnalysis = aiAnalysisBuffer.value;
+          aiAnalyzing.value = false;
+          return;
+        }
+
         aiAnalysisBuffer.value = processedContent;
         aiAnalysis.value.overallAnalysis = processedContent;
         aiAnalyzing.value = false;

@@ -5,6 +5,7 @@ import com.example.springboot.config.AiGatewayProperties;
 import com.example.springboot.service.AiGatewayService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -51,14 +52,14 @@ public class AiGatewayController {
 
     @Operation(summary = "Structured AI chat", description = "Receive a POST request and return a blocking result")
     @PostMapping({"/ai/chat", "/ai/chat/structured"})
-    public String chatStructured(@RequestBody ChatPayload payload) {
-        return aiGatewayService.chat(resolveScene(payload), resolvePrompt(payload), payload.getMeta());
+    public String chatStructured(@RequestBody ChatPayload payload, HttpServletRequest request) {
+        return aiGatewayService.chat(resolveScene(payload), resolvePrompt(payload), payload.getMeta(), currentUserId(request));
     }
 
     @Operation(summary = "Streaming AI chat", description = "Stream an AI response")
     @PostMapping(value = "/ai/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> chatStream(@RequestBody ChatPayload payload) {
-        return aiGatewayService.stream(resolveScene(payload), resolvePrompt(payload), payload.getMeta());
+    public Flux<String> chatStream(@RequestBody ChatPayload payload, HttpServletRequest request) {
+        return aiGatewayService.stream(resolveScene(payload), resolvePrompt(payload), payload.getMeta(), currentUserId(request));
     }
 
     @Operation(summary = "AI image generation", description = "Generate image URLs or base64 images for an AI scene")
@@ -133,5 +134,19 @@ public class AiGatewayController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "prompt is required");
         }
         return payload.getPrompt();
+    }
+
+    private Integer currentUserId(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+        Object userId = request.getAttribute("userId");
+        if (userId instanceof Integer value) {
+            return value;
+        }
+        if (userId instanceof Number number) {
+            return number.intValue();
+        }
+        return null;
     }
 }

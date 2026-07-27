@@ -13,6 +13,7 @@ import java.util.Map;
 public class AiGatewayProperties {
 
     private Map<String, SceneProperties> scenes = new HashMap<>();
+    private Map<String, ProviderProperties> providers = new HashMap<>();
     private ImageProperties image = new ImageProperties();
     private AudioProperties audio = new AudioProperties();
 
@@ -25,6 +26,13 @@ public class AiGatewayProperties {
         private Double temperature;
         private Double topP;
         private Integer maxTokens;
+    }
+
+    @Data
+    public static class ProviderProperties {
+        private String apiKey = "";
+        private String baseUrl = "";
+        private String completionsPath = "/chat/completions";
     }
 
     @Data

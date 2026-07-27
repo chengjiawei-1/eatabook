@@ -1,6 +1,7 @@
 import httpInstance from "@/utils/http";
 
 export interface SubmitTestParams {
+  testId?: number;
   userId: number;
   testTime: string;                  // 测试时间
   constitutionScores: string;        // JSON string
@@ -22,6 +23,17 @@ export interface SubmitTestParams {
 // 提交测试
 export const submitTestAPI = (data: SubmitTestParams) => {
   return httpInstance.post('/api/constitution-tests', data);
+};
+
+export const generateConstitutionAdviceAPI = (data: {
+  userId: number;
+  primary: string;
+  secondary?: string;
+  age?: number;
+  location?: string;
+  season?: string;
+}) => {
+  return httpInstance.post('/api/constitution-tests/advice', data);
 };
 
 // 获取历史

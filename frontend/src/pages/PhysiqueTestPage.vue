@@ -397,7 +397,7 @@ import Nav from "@/components/Nav.vue";
 import Footer from "@/components/Footer.vue";
 import { useAuthStore } from "@/stores/auth";
 // 引入你刚刚定义的 API
-import { submitTestAPI } from "@/api/constitution";
+import { generateConstitutionAdviceAPI, submitTestAPI } from "@/api/constitution";
 import { getUserInfoAPI } from "@/api/user";
 import { chatStream  } from "@/api/ai";
 import { useRouter } from "vue-router";
@@ -421,6 +421,28 @@ const getStructuredReport = (text: string) => {
     foodMeat: extract('肉类'),
     daily: extract('注意')
   };
+};
+
+const AI_FAILURE_MARKERS = [
+  "AI 服务请求过于频繁",
+  "AI 服务调用失败",
+  "Too Many Requests",
+  "rate limiting",
+  "System is too busy",
+  "Request was rejected",
+  "50609",
+  "429"
+];
+
+const isAiFailureText = (text: string) => {
+  return !!text && AI_FAILURE_MARKERS.some(marker => text.includes(marker));
+};
+
+const isValidStructuredAdvice = (data: Record<string, any>) => {
+  const joined = Object.values(data || {}).join("\n");
+  if (!joined.trim() || isAiFailureText(joined)) return false;
+  return ["plan", "foodStaple", "foodVeg", "foodMeat", "daily"]
+    .every(key => typeof data?.[key] === "string" && data[key].trim().length > 0);
 };
 
 const formattedAiSuggestion = computed(() => {
@@ -702,14 +724,56 @@ if (authStore.user?.userId) {
       ]);
 
       const saveRes = results[0].status === 'fulfilled' ? results[0].value : null;
-      if (saveRes?.data?.foodRecommendations) {
-        backendFoodRecs.value = saveRes.data.foodRecommendations;
+      const savePayload = ((saveRes as any)?.data || saveRes || {}) as any;
+      const savedTestId = savePayload?.testId;
+      if (savePayload?.foodRecommendations) {
+        backendFoodRecs.value = savePayload.foodRecommendations;
       }
 
       const userRes = results[1].status === 'fulfilled' ? results[1].value : null;
       const userInfo = (userRes?.data || userRes) as any;
       const age = userInfo?.birthday ? getAge(userInfo.birthday) : "未知";
       const uRegion = userInfo?.nativePlace || "未知";
+
+      const adviceRes = await generateConstitutionAdviceAPI({
+        userId: Number(authStore.user.userId),
+        primary: primaryType,
+        secondary: secondaryTypes.join(','),
+        age: typeof age === 'number' ? age : undefined,
+        location: uRegion
+      });
+
+      aiSuggestion.value = (adviceRes as any).advice || "";
+      isAiLoading.value = false;
+
+      const structuredData = getStructuredReport(aiSuggestion.value);
+      console.log("AI 报告生成完毕，准备存入数据库:", structuredData);
+
+      if (isAiFailureText(aiSuggestion.value) || !isValidStructuredAdvice(structuredData)) {
+        aiSuggestion.value = "[方案]AI 建议暂时没有生成成功，请稍后刷新后再试。[主食]暂未生成[蔬果]暂未生成[肉类]暂未生成[注意]本次失败不会写入数据库。";
+        console.warn("AI 报告无效，已跳过数据库保存", aiSuggestion.value);
+        return;
+      }
+
+      try {
+        await submitTestAPI({
+          testId: savedTestId,
+          userId: Number(authStore.user.userId),
+          testTime: new Date().toISOString(),
+          constitutionScores: JSON.stringify(dbRawScores),
+          constitutionConvertScores: JSON.stringify(dbConvertScores),
+          mainConstitution: primaryType,
+          subConstitution: secondaryTypes.join(','),
+          suggest: suggest,
+          needFoodRecommendation: true,
+          ...structuredData
+        });
+        console.log("AI 结构化报告已成功持久化到数据库");
+      } catch (updateErr) {
+        console.error("更新 AI 报告失败", updateErr);
+      }
+
+      return;
 
       const prompt = `
         用户基础信息：年龄 ${age} 岁，所在地区：${uRegion}。
@@ -732,9 +796,16 @@ if (authStore.user?.userId) {
           
           console.log("AI 报告生成完毕，准备存入数据库:", structuredData);
 
+          if (isAiFailureText(aiSuggestion.value) || !isValidStructuredAdvice(structuredData)) {
+            aiSuggestion.value = "[方案]AI 建议暂时没有生成成功，请稍后刷新后再试。[主食]暂未生成[蔬果]暂未生成[肉类]暂未生成[注意]本次失败不会写入数据库。";
+            console.warn("AI 报告无效，已跳过数据库保存", aiSuggestion.value);
+            return;
+          }
+
           try {
             // 后端逻辑应该是根据 userId 和最近一次 testId 进行 update
             await submitTestAPI({
+              testId: savedTestId,
               userId: Number(authStore.user.userId),
               testTime: new Date().toISOString(),
               constitutionScores: JSON.stringify(dbRawScores),

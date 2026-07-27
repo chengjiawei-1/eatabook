@@ -1,5 +1,20 @@
 import httpInstance from "@/utils/http";
 
+const AI_FAILURE_MARKERS = [
+  "AI 服务请求过于频繁",
+  "AI 服务调用失败",
+  "Too Many Requests",
+  "rate limiting",
+  "System is too busy",
+  "Request was rejected",
+  "50609",
+  "429"
+];
+
+function isAiFailureText(text: string) {
+  return !!text && AI_FAILURE_MARKERS.some(marker => text.includes(marker));
+}
+
 // 定义体质深度分析缓存的数据结构
 export interface PhysiqueAnalysisCache {
   userId: number;
@@ -23,7 +38,7 @@ export async function getAnalysisCache(userId: number, latestTestTime: number): 
 
     const data = (res as any).data !== undefined ? (res as any).data : res;
 
-    if (typeof data === 'string' && data.trim().length > 10) {
+    if (typeof data === 'string' && data.trim().length > 10 && !isAiFailureText(data)) {
       return data;
     }
     return null;
@@ -45,6 +60,10 @@ export async function saveAnalysisCache(
   latestTestTimeMillis: number
 ): Promise<boolean> {
   try {
+    if (!analysisContent?.trim() || isAiFailureText(analysisContent)) {
+      return false;
+    }
+
     const res = await httpInstance.post('/api/constitution-analysis', {
       userId,
       analysisContent,

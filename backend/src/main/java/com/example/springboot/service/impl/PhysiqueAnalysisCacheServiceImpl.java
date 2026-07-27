@@ -1,9 +1,9 @@
 package com.example.springboot.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.springboot.entity.PhysiqueAnalysisCache;
 import com.example.springboot.mapper.PhysiqueAnalysisCacheMapper;
 import com.example.springboot.service.PhysiqueAnalysisCacheService;
+import com.example.springboot.utils.AiOutputGuard;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -27,6 +27,11 @@ public class PhysiqueAnalysisCacheServiceImpl implements PhysiqueAnalysisCacheSe
                 long diff = Math.abs(cache.getLastTestTime().getTime() - latestTestTime.getTime());
 
                 if (diff < 2000) {
+                    if (AiOutputGuard.isFailureText(cache.getAnalysisContent())) {
+                        log.warn("用户 {} 的体质分析缓存是 AI 错误响应，删除后重新生成", userId);
+                        analysisMapper.deleteByUserId(userId);
+                        return null;
+                    }
                     log.info("用户 {} 命中体质分析缓存，时间误差: {}ms", userId, diff);
                     return cache.getAnalysisContent();
                 }
@@ -44,6 +49,10 @@ public class PhysiqueAnalysisCacheServiceImpl implements PhysiqueAnalysisCacheSe
 
     @Override
     public int saveOrUpdateAnalysis(PhysiqueAnalysisCache analysis) {
+        if (analysis == null || AiOutputGuard.isFailureText(analysis.getAnalysisContent())) {
+            log.warn("拒绝保存 AI 错误响应到体质分析缓存");
+            return 0;
+        }
         return analysisMapper.saveOrUpdateAnalysis(analysis);
     }
 

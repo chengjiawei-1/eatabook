@@ -36,12 +36,12 @@
             
             <div class="chat-messages" ref="msgContainer">
               <div v-for="(msg, index) in messages" :key="index" :class="['msg-wrapper', msg.role]">
-                <div class="msg-content">{{ msg.text }}</div>
+                <div class="msg-content">{{ displayMessageText(msg) }}</div>
               </div>
               
               <div v-if="isTyping" class="msg-wrapper assistant">
                 <div class="msg-content typing">
-                  {{ currentStreamingText }}
+                  {{ cleanAssistantText(currentStreamingText) || requestStatusText }}
                   <span class="cursor">|</span>
                 </div>
               </div>
@@ -78,6 +78,7 @@ const isCollapsed = ref(false);
 const userInput = ref('');
 const isTyping = ref(false);
 const currentStreamingText = ref('');
+const requestStatusText = ref('');
 const msgContainer = ref<HTMLElement | null>(null);
 
 const defaultMessage = { role: 'assistant', text: '老己啊，看你气色一般，是不是又在外面“负重行”了？来进屋坐，咱翻翻古籍，喝碗热汤。' };
@@ -91,7 +92,20 @@ const toggleChat = () => {
 const resetChat = () => {
   isTyping.value = false;
   currentStreamingText.value = '';
+  requestStatusText.value = '';
   messages.value = [{ role: 'assistant', text: '老己啊，刚才那是翻篇了。咱重新唠唠，你想问点啥？' }];
+};
+
+const cleanAssistantText = (text: string) => {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/^\s*-{3,}\s*$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+};
+
+const displayMessageText = (msg: { role: string; text: string }) => {
+  return msg.role === 'assistant' ? cleanAssistantText(msg.text) : msg.text;
 };
 
 const handleSend = async () => {
@@ -101,20 +115,40 @@ const handleSend = async () => {
   userInput.value = '';
   isTyping.value = true;
   currentStreamingText.value = '';
+  requestStatusText.value = '老己正在接话...';
+  let finalized = false;
+
+  const finishRequest = (message?: string) => {
+    if (finalized) return;
+    finalized = true;
+
+    const text = (message ?? currentStreamingText.value).trim();
+    messages.value.push({
+      role: 'assistant',
+      text: text || '这次请求已经结束，但后端没有返回内容。请检查后端日志或稍后再试。'
+    });
+    currentStreamingText.value = '';
+    requestStatusText.value = '';
+    isTyping.value = false;
+    scrollToBottom();
+  };
 
   try {
+    console.info('[LaojiChat] stream request started', { prompt });
     await chatStream({ agent: 'laoji', prompt }, (chunk) => {
+      requestStatusText.value = '';
       currentStreamingText.value += chunk;
       scrollToBottom();
     }, () => {
-      if (currentStreamingText.value) messages.value.push({ role: 'assistant', text: currentStreamingText.value });
-      currentStreamingText.value = '';
-      isTyping.value = false;
-      scrollToBottom();
+      console.info('[LaojiChat] stream request finished', {
+        chars: currentStreamingText.value.length
+      });
+      finishRequest();
     });
   } catch (err) {
-    messages.value.push({ role: 'assistant', text: '哎呀老己，我这会儿断片了，等下再聊？' });
-    isTyping.value = false;
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error('[LaojiChat] stream request failed', err);
+    finishRequest(`哎呀老己，我这会儿断片了。错误信息：${detail}`);
   }
 };
 
@@ -284,7 +318,7 @@ const scrollToBottom = () => {
 .msg-wrapper.user { align-self: flex-end; }
 .msg-wrapper.assistant { align-self: flex-start; }
 
-.msg-content { padding: 10px 14px; border-radius: 15px; font-size: 14px; line-height: 1.6; }
+.msg-content { padding: 10px 14px; border-radius: 15px; font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .user .msg-content { background: #b86207; color: white; border-bottom-right-radius: 2px; }
 .assistant .msg-content { background: white; color: #4a4a4a; border: 1px solid #eceae0; border-bottom-left-radius: 2px; }
 

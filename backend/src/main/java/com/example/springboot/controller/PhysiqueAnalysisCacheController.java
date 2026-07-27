@@ -2,6 +2,7 @@ package com.example.springboot.controller;
 
 import com.example.springboot.entity.PhysiqueAnalysisCache;
 import com.example.springboot.service.PhysiqueAnalysisCacheService;
+import com.example.springboot.utils.AiOutputGuard;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -51,6 +52,10 @@ public class PhysiqueAnalysisCacheController {
             Integer userId = Integer.valueOf(params.get("userId").toString());
 
             String content = (String) params.get("analysisContent");
+            if (AiOutputGuard.isFailureText(content)) {
+                log.warn("拒绝保存 AI 错误响应到体质分析缓存");
+                return "error";
+            }
 
             Object tsObj = params.get("latestTestTime");
             if (tsObj == null) {
@@ -67,7 +72,7 @@ public class PhysiqueAnalysisCacheController {
 
             int rows = analysisService.saveOrUpdateAnalysis(entity);
             log.info("保存成功，影响行数: {}", rows);
-            return "success";
+            return rows > 0 ? "success" : "error";
         } catch (Exception e) {
             log.error("保存缓存异常详细信息: ", e);
             return "error";

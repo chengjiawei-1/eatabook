@@ -76,24 +76,28 @@ export async function chatStream(
 
       for (const event of events) {
         const lines = event.split(/\r?\n/);
+        const dataLines: string[] = [];
 
         for (const line of lines) {
           if (!line.startsWith("data:")) continue;
-
-          const content = line.slice(5).trim();
-          if (!content) continue;
-
-          if (content === "[DONE]") {
-            if (!doneFlag) {
-              doneFlag = true;
-              onDone?.();
-            }
-            controller.abort();
-            return;
-          }
-
-          onChunk(content);
+          dataLines.push(line.slice(5).replace(/^ /, ""));
         }
+
+        if (dataLines.length === 0) continue;
+
+        const content = dataLines.join("\n");
+        if (!content) continue;
+
+        if (content.trim() === "[DONE]") {
+          if (!doneFlag) {
+            doneFlag = true;
+            onDone?.();
+          }
+          controller.abort();
+          return;
+        }
+
+        onChunk(content);
       }
     }
   } catch (err) {

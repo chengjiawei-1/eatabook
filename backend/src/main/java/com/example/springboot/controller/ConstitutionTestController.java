@@ -3,6 +3,7 @@ package com.example.springboot.controller;
 import com.example.springboot.entity.UserConstitutionTests;
 import com.example.springboot.req.ConstitutionTestReq;
 import com.example.springboot.res.ConstitutionTestRes;
+import com.example.springboot.service.ConstitutionAdviceGenerationService;
 import com.example.springboot.service.UserConstitutionTestService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,11 +20,20 @@ public class ConstitutionTestController {
     @Autowired
     private UserConstitutionTestService constitutionService;
 
+    @Autowired
+    private ConstitutionAdviceGenerationService adviceGenerationService;
+
     //提交测试结果
     @Operation(summary = "提交测试结果", description = "提交该用户当前测试结果")
     @PostMapping
     public ConstitutionTestRes submit(@RequestBody ConstitutionTestReq req) {
         return constitutionService.submitTest(req);
+    }
+
+    @PostMapping("/advice")
+    public ConstitutionAdviceGenerationService.ConstitutionAdviceResult generateAdvice(
+            @RequestBody ConstitutionAdviceGenerationService.ConstitutionAdviceRequest req) {
+        return adviceGenerationService.generate(req);
     }
 
     //获取历史记录

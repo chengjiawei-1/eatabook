@@ -17,7 +17,7 @@ spring:
         base-url: ${SILICONFLOW_BASE_URL:https://api.siliconflow.cn/v1}
         completions-path: ${SILICONFLOW_CHAT_COMPLETIONS_PATH:/chat/completions}
         options:
-          model: ${AI_CHAT_DEFAULT_MODEL:deepseek-ai/DeepSeek-V3}
+          model: ${AI_CHAT_DEFAULT_MODEL:Qwen/Qwen3-14B}
       embedding:
         api-key: ${AI_EMBEDDING_API_KEY:${SILICONFLOW_API_KEY:}}
         base-url: ${AI_EMBEDDING_BASE_URL:${SILICONFLOW_BASE_URL:https://api.siliconflow.cn/v1}}
@@ -92,7 +92,18 @@ spring:
     time-zone: GMT+8
     date-format: yyyy-MM-dd HH:mm:ss
 
+logging:
+  level:
+    org.springframework.ai.chat.model.MessageAggregator: off
+
 app:
+  ai:
+    request:
+      max-concurrent: ${AI_REQUEST_MAX_CONCURRENT:1}
+      min-interval-millis: ${AI_REQUEST_MIN_INTERVAL_MILLIS:3000}
+      max-retries: ${AI_REQUEST_MAX_RETRIES:2}
+      initial-backoff-millis: ${AI_REQUEST_INITIAL_BACKOFF_MILLIS:8000}
+      max-backoff-millis: ${AI_REQUEST_MAX_BACKOFF_MILLIS:30000}
   rag:
     knowledge-location: ${RAG_KNOWLEDGE_LOCATION:classpath*:knowledge/**/*}
     index-on-startup: ${RAG_INDEX_ON_STARTUP:false}
@@ -110,6 +121,20 @@ app:
     search:
       default-top-k: ${RAG_SEARCH_TOP_K:5}
       default-similarity-threshold: ${RAG_SEARCH_SIMILARITY_THRESHOLD:0.0}
+  constitution-advice:
+    model: ${CONSTITUTION_ADVICE_MODEL:Qwen/Qwen3-14B}
+    rag-top-k: ${CONSTITUTION_ADVICE_RAG_TOP_K:8}
+  diet-therapy-plan:
+    extraction-model: ${DIET_PLAN_EXTRACTION_MODEL:${DEEPSEEK_CHAT_MODEL:deepseek-chat}}
+    plan-model: ${DIET_PLAN_MODEL:${DEEPSEEK_CHAT_MODEL:deepseek-chat}}
+  laoji:
+    rag-top-k: ${LAOJI_RAG_TOP_K:5}
+    max-context-chars: ${LAOJI_MAX_CONTEXT_CHARS:6000}
+    rag-query-expansion-enabled: ${LAOJI_RAG_QUERY_EXPANSION_ENABLED:false}
+    intent-model: ${LAOJI_INTENT_MODEL:deepseek-ai/DeepSeek-V4-Flash}
+    tools:
+      intent-classifier-enabled: ${LAOJI_INTENT_CLASSIFIER_ENABLED:false}
+      max-json-chars: ${LAOJI_TOOLS_MAX_JSON_CHARS:12000}
 
 # ==============================
 # MyBatis
@@ -128,29 +153,47 @@ ai:
       ancient-text-translation:
         template: classpath:/ai/prompts/ancient-text-translation.st
         provider: siliconflow
-        model: ${AI_ANCIENT_TRANSLATION_MODEL:deepseek-ai/DeepSeek-V3}
+        model: ${AI_ANCIENT_TRANSLATION_MODEL:Qwen/Qwen3-14B}
         output: text
         temperature: ${AI_ANCIENT_TRANSLATION_TEMPERATURE:0.2}
         top-p: ${AI_ANCIENT_TRANSLATION_TOP_P:0.8}
         max-tokens: ${AI_ANCIENT_TRANSLATION_MAX_TOKENS:2048}
       constitution-analysis:
         template: classpath:/ai/prompts/constitution-analysis.st
+        provider: siliconflow
+        model: ${AI_CONSTITUTION_ANALYSIS_MODEL:Qwen/Qwen3-8B}
+        output: text
+        temperature: ${AI_CONSTITUTION_ANALYSIS_TEMPERATURE:0.1}
+        top-p: ${AI_CONSTITUTION_ANALYSIS_TOP_P:0.8}
+        max-tokens: ${AI_CONSTITUTION_ANALYSIS_MAX_TOKENS:1200}
       diet-therapy-plan:
         template: classpath:/ai/prompts/diet-therapy-plan.st
+        provider: deepseek
+        model: ${AI_DIET_THERAPY_PLAN_MODEL:${DEEPSEEK_CHAT_MODEL:deepseek-chat}}
+        output: text
+        temperature: ${AI_DIET_THERAPY_PLAN_TEMPERATURE:0.2}
+        top-p: ${AI_DIET_THERAPY_PLAN_TOP_P:0.8}
+        max-tokens: ${AI_DIET_THERAPY_PLAN_MAX_TOKENS:2048}
       constitution-change-analysis:
         template: classpath:/ai/prompts/constitution-change-analysis.st
         provider: siliconflow
-        model: ${AI_CONSTITUTION_CHANGE_MODEL:deepseek-ai/DeepSeek-V3}
+        model: ${AI_CONSTITUTION_CHANGE_MODEL:Qwen/Qwen3-14B}
         output: text
         temperature: ${AI_CONSTITUTION_CHANGE_TEMPERATURE:0.2}
         top-p: ${AI_CONSTITUTION_CHANGE_TOP_P:0.8}
         max-tokens: ${AI_CONSTITUTION_CHANGE_MAX_TOKENS:2048}
       diet-therapy-qa:
         template: classpath:/ai/prompts/diet-therapy-qa.st
+        provider: deepseek
+        model: ${AI_LAOJI_CHAT_MODEL:${DEEPSEEK_CHAT_MODEL:deepseek-chat}}
+        output: text
+        temperature: ${AI_LAOJI_CHAT_TEMPERATURE:0.7}
+        top-p: ${AI_LAOJI_CHAT_TOP_P:0.8}
+        max-tokens: ${AI_LAOJI_CHAT_MAX_TOKENS:1200}
       culinary-image-storyboard:
         template: classpath:/ai/prompts/culinary-image-storyboard.st
         provider: siliconflow
-        model: ${AI_CULINARY_STORYBOARD_MODEL:deepseek-ai/DeepSeek-V3}
+        model: ${AI_CULINARY_STORYBOARD_MODEL:Qwen/Qwen3-14B}
         output: text
         temperature: ${AI_CULINARY_STORYBOARD_TEMPERATURE:0.2}
         top-p: ${AI_CULINARY_STORYBOARD_TOP_P:0.8}
@@ -160,6 +203,15 @@ ai:
         provider: volcengine-ark
         model: ${ARK_IMAGE_MODEL:doubao-seedream-4-5-251128}
         output: image
+    providers:
+      siliconflow:
+        api-key: ${SILICONFLOW_API_KEY:}
+        base-url: ${SILICONFLOW_BASE_URL:https://api.siliconflow.cn/v1}
+        completions-path: ${SILICONFLOW_CHAT_COMPLETIONS_PATH:/chat/completions}
+      deepseek:
+        api-key: ${DEEPSEEK_API_KEY:}
+        base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+        completions-path: ${DEEPSEEK_CHAT_COMPLETIONS_PATH:/chat/completions}
     image:
       api-key: ${ARK_API_KEY:}
       base-url: ${ARK_BASE_URL:https://ark.cn-beijing.volces.com/api/v3}

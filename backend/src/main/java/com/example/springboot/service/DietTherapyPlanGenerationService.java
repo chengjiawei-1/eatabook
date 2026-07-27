@@ -52,9 +52,14 @@ public class DietTherapyPlanGenerationService {
     private final DishesMapper dishesMapper;
     private final RagSearchService ragSearchService;
     private final UserMealPlanService userMealPlanService;
+    private final AiRequestLimiter aiRequestLimiter;
+    private final OpenAiCompatibleChatService openAiCompatibleChatService;
 
-    @Value("${spring.ai.openai.chat.options.model:deepseek-ai/DeepSeek-V3}")
-    private String chatModel;
+    @Value("${app.diet-therapy-plan.extraction-model:Qwen/Qwen3-8B}")
+    private String extractionModel;
+
+    @Value("${app.diet-therapy-plan.plan-model:deepseek-ai/DeepSeek-V4-Flash}")
+    private String planModel;
 
     public DietTherapyPlanGenerationService(ChatClient.Builder chatClientBuilder,
                                             ObjectMapper objectMapper,
@@ -62,7 +67,9 @@ public class DietTherapyPlanGenerationService {
                                             UserConstitutionTestsMapper constitutionTestsMapper,
                                             DishesMapper dishesMapper,
                                             RagSearchService ragSearchService,
-                                            UserMealPlanService userMealPlanService) {
+                                            UserMealPlanService userMealPlanService,
+                                            AiRequestLimiter aiRequestLimiter,
+                                            OpenAiCompatibleChatService openAiCompatibleChatService) {
         this.chatClient = chatClientBuilder.build();
         this.objectMapper = objectMapper;
         this.userMapper = userMapper;
@@ -70,6 +77,8 @@ public class DietTherapyPlanGenerationService {
         this.dishesMapper = dishesMapper;
         this.ragSearchService = ragSearchService;
         this.userMealPlanService = userMealPlanService;
+        this.aiRequestLimiter = aiRequestLimiter;
+        this.openAiCompatibleChatService = openAiCompatibleChatService;
     }
 
     public Map<String, Object> generate(Integer userId, String prompt, Boolean save, Integer topK) {
@@ -92,6 +101,9 @@ public class DietTherapyPlanGenerationService {
         ObjectNode normalizedPlan = normalizePlan(plan, candidates);
 
         List<Integer> allDishIds = collectPlanDishIds(normalizedPlan);
+        if (allDishIds.size() < 21) {
+            throw new IllegalStateException("failed to generate a complete seven-day meal plan");
+        }
         Map<Integer, Dishes> dishDetails = loadDishDetails(allDishIds);
 
         if (Boolean.TRUE.equals(save)) {
@@ -115,8 +127,76 @@ public class DietTherapyPlanGenerationService {
     }
 
     private JsonNode extractProfile(User user, UserConstitutionTests latestTest, String prompt) {
-        String response = callModel(buildExtractionPrompt(user, latestTest, prompt), 0.0, 800);
+        JsonNode promptProfile = parseStructuredPrompt(prompt);
+        if (promptProfile != null) {
+            return promptProfile;
+        }
+        String response = callModel(buildExtractionPrompt(user, latestTest, prompt), 0.0, 800, extractionModel);
         return readJsonObject(response);
+    }
+
+    private JsonNode parseStructuredPrompt(String prompt) {
+        if (!hasText(prompt)) {
+            return null;
+        }
+        try {
+            JsonNode input = objectMapper.readTree(prompt);
+            if (!input.isObject()) {
+                return null;
+            }
+
+            ObjectNode node = objectMapper.createObjectNode();
+            copyText(input, node, "primary", "primary");
+            copyText(input, node, "age", "age");
+            copyText(input, node, "location", "location");
+            copyText(input, node, "preferences", "preferences");
+
+            JsonNode secondaryValue = input.get("secondary");
+            ArrayNode secondary = objectMapper.createArrayNode();
+            if (secondaryValue != null && secondaryValue.isArray()) {
+                for (JsonNode item : secondaryValue) {
+                    if (hasText(item.asText())) {
+                        secondary.add(item.asText().trim());
+                    }
+                }
+            } else if (secondaryValue != null && hasText(secondaryValue.asText())) {
+                splitConstitutions(secondaryValue.asText()).forEach(secondary::add);
+            }
+            node.set("secondary", secondary);
+
+            applyCurrentSeason(node);
+            return node;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private void copyText(JsonNode source, ObjectNode target, String sourceField, String targetField) {
+        JsonNode value = source.get(sourceField);
+        if (value == null || value.isNull()) {
+            return;
+        }
+        if (value.isNumber() && "age".equals(targetField)) {
+            target.put(targetField, value.asInt());
+            return;
+        }
+        String text = value.asText("");
+        if (hasText(text)) {
+            target.put(targetField, text.trim());
+        }
+    }
+
+    private void applyCurrentSeason(ObjectNode node) {
+        int month = LocalDate.now().getMonthValue();
+        if (month >= 3 && month <= 5) {
+            node.put("season_spring", 1);
+        } else if (month >= 6 && month <= 8) {
+            node.put("season_summer", 1);
+        } else if (month >= 9 && month <= 11) {
+            node.put("season_autumn", 1);
+        } else {
+            node.put("season_winter", 1);
+        }
     }
 
     private String buildExtractionPrompt(User user, UserConstitutionTests latestTest, String prompt) {
@@ -283,7 +363,7 @@ public class DietTherapyPlanGenerationService {
             return error;
         }
 
-        String response = callModel(buildPlanPrompt(extracted, candidates), 0.1, 1200);
+        String response = callModel(buildPlanPrompt(extracted, candidates), 0.1, 1200, planModel);
         JsonNode json = readJsonObject(response);
         if (json != null && json.isObject()) {
             return (ObjectNode) json;
@@ -431,19 +511,16 @@ public class DietTherapyPlanGenerationService {
                 .collect(Collectors.toMap(Dishes::getDishId, dish -> dish, (left, right) -> left, LinkedHashMap::new));
     }
 
-    private String callModel(String prompt, double temperature, int maxTokens) {
+    private String callModel(String prompt, double temperature, int maxTokens, String model) {
         OpenAiChatOptions.Builder options = OpenAiChatOptions.builder()
                 .temperature(temperature)
                 .maxTokens(maxTokens)
                 .streamUsage(false);
-        if (hasText(chatModel)) {
-            options.model(chatModel.trim());
+        if (hasText(model)) {
+            options.model(model.trim());
         }
-        String content = chatClient.prompt()
-                .options(options.build())
-                .user(prompt)
-                .call()
-                .content();
+        String content = aiRequestLimiter.execute(() ->
+                openAiCompatibleChatService.callProvider("deepseek", model, temperature, null, maxTokens, prompt));
         return content == null ? "" : content.trim();
     }
 

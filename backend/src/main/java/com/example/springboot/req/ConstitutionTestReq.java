@@ -4,6 +4,7 @@ import lombok.Data;
 
 @Data
 public class ConstitutionTestReq {
+    private Integer testId;
     private Integer userId;
     private String constitutionScores;
     private String constitutionConvertScores;

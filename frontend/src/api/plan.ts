@@ -60,5 +60,7 @@ export async function generateMealPlan(params: {
   save?: boolean;
   topK?: number;
 }): Promise<any> {
-  return httpInstance.post('/api/meal-plans/generate', params);
+  return httpInstance.post('/api/meal-plans/generate', params, {
+    timeout: 180000
+  });
 }

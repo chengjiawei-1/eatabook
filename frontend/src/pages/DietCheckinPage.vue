@@ -436,9 +436,9 @@ const termSuggest = ref("正在同步您的体质数据并生成专属调理建�
 
 // 三餐数据对象
 const dailyMeals = reactive({
-  breakfast: { id:0,label: "Morning 早餐", name: "加载中...", tags: "清淡", image: "https://via.placeholder.com/150", effect: "正在计算...", steps: "" },
-  lunch: { id:0,label: "Noon 午餐", name: "加载中...", tags: "营养", image: "https://via.placeholder.com/150", effect: "正在计算...", steps: "" },
-  dinner: { id:0,label: "Night 晚餐", name: "加载中...", tags: "易消化", image: "https://via.placeholder.com/150", effect: "正在计算...", steps: "" }
+  breakfast: { id:0,label: "Morning 早餐", name: "加载中...", tags: "清淡", image: "https://dummyimage.com/600x400/f5f5f5/8b4513&text=Diet+Meal", effect: "正在计算...", steps: "" },
+  lunch: { id:0,label: "Noon 午餐", name: "加载中...", tags: "营养", image: "https://dummyimage.com/600x400/f5f5f5/8b4513&text=Diet+Meal", effect: "正在计算...", steps: "" },
+  dinner: { id:0,label: "Night 晚餐", name: "加载中...", tags: "易消化", image: "https://dummyimage.com/600x400/f5f5f5/8b4513&text=Diet+Meal", effect: "正在计算...", steps: "" }
 });
 
 // 核心逻辑：获取用户信息并调用 Projecter 智能体
@@ -453,6 +453,13 @@ const getMyAge = (birthday: string) => {
   const birthDate = new Date(birthday);
   const age = today.getFullYear() - birthDate.getFullYear();
   return age;
+};
+
+const setDietPlanFailureState = () => {
+  termSuggest.value = "七日食养方案暂时生成失败，请稍后重试。";
+  dailyMeals.breakfast.name = "生成失败，请稍后重试";
+  dailyMeals.lunch.name = "生成失败，请稍后重试";
+  dailyMeals.dinner.name = "生成失败，请稍后重试";
 };
 
 const getAiPlan = async () => {
@@ -530,12 +537,14 @@ const getAiPlan = async () => {
       save: true,
       topK: 20
     });
-    if (!response) return;
+    if (!response) {
+      throw new Error("empty meal plan response");
+    }
 
     const finalData = response.plan || response;
 
     // 更新前端状态并同步到后端
-    if (finalData && finalData.breakfast) {
+    if (finalData && finalData.breakfast && finalData.lunch && finalData.dinner) {
       // 新生成的方案，锚点一定是今天
       const todayAnchor = new Date();
       todayAnchor.setHours(0,0,0,0);
@@ -546,10 +555,13 @@ const getAiPlan = async () => {
 
       // 保存到后端，注意参数名要和后端 Controller 对应
       console.log("✅ AI 新计划已生成并锁定今日为起始日");
+    } else {
+      throw new Error("invalid meal plan response");
     }
 
   } catch (error) {
     console.error("❌ 调理方案流程中断:", error);
+    setDietPlanFailureState();
   } finally {
     isAiLoading.value = false;
   }
