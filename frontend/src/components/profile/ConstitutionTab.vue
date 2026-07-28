@@ -19,10 +19,26 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
           
           <div class="lg:col-span-2 bg-[#fdfaf7] dark:bg-slate-900/50 rounded-2xl p-6 border-2 border-[#f2ece4] dark:border-slate-700 relative overflow-hidden">
-            <h3 class="text-xl font-serif font-bold text-[#6d4c3d] dark:text-[#deb887] mb-6 flex items-center">
-              <span class="w-1.5 h-4 bg-[#d4a373] mr-2 rounded-full"></span>
-              体质深度分析
-            </h3>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+              <h3 class="text-xl font-serif font-bold text-[#6d4c3d] dark:text-[#deb887] flex items-center">
+                <span class="w-1.5 h-4 bg-[#d4a373] mr-2 rounded-full"></span>
+                体质深度分析
+              </h3>
+              <div class="flex items-center gap-2">
+                <button
+                  @click="toggleAnalysisSpeech"
+                  :disabled="!analysisSpeechText"
+                  class="tool-btn"
+                  :title="isSpeakingAnalysis ? '停止朗读' : '朗读体质分析'"
+                >
+                  <i :class="isSpeakingAnalysis ? 'fa-solid fa-volume-xmark' : 'fa-solid fa-volume-high'"></i>
+                  <span>{{ isSpeakingAnalysis ? '停止' : '朗读' }}</span>
+                </button>
+              </div>
+            </div>
+            <p v-if="cardStatus" class="mb-4 text-xs text-[#8a6d51] bg-white/70 border border-[#f2ece4] rounded-lg px-3 py-2">
+              {{ cardStatus }}
+            </p>
             <div class="space-y-4 relative z-10">
             <div class="text-lg text-gray-700 dark:text-gray-300 leading-[1.8] font-serif min-h-24">
               <template v-if="aiAnalyzing && !aiAnalysisBuffer">
@@ -169,6 +185,31 @@ input[type="date"], input[type="time"] {
   accent-color: #8a6d51;
 }
 
+.tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid #eadbca;
+  background: #fffaf4;
+  color: #8a6d51;
+  font-size: 12px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.tool-btn:hover:not(:disabled) {
+  background: #8a6d51;
+  color: #fff;
+}
+
+.tool-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 /* 响应式微调 */
 @media (max-width: 640px) {
   .text-3xl { font-size: 1.5rem; }
@@ -215,6 +256,13 @@ const aiAnalysis = ref({
 });
 const topThreeConstitutions = ref<any[]>([]);
 const recentTest = ref({ date: '' });
+const cardStatus = ref('');
+const isSpeakingAnalysis = ref(false);
+
+const analysisSpeechText = computed(() => {
+  const text = normalizeAnalysisText(aiAnalysisBuffer.value || aiAnalysis.value.overallAnalysis || '');
+  return text.startsWith('正在') ? '' : text;
+});
 
 // 下次测试提醒
 const nextTestReminder = ref({ daysLeft: 15 });
@@ -251,6 +299,16 @@ ${JSON.stringify(recent6, null, 2)}
 `;
 };
 
+const normalizeAnalysisText = (text: string) => {
+  return String(text || '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/([^\n])([一二三四五六七八九十]、)/g, '$1\n$2')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+};
+
 // 新增 AI 分析内容流式显示变量
 const aiAnalysisBuffer = ref(""); // 当前已经展示的内容
 const aiAnalyzing = ref(false);
@@ -273,8 +331,9 @@ const callAIAnalysis = async (recent6: any[]) => {
 
     if (cachedData && cachedData.trim() !== "") {
 // 命中缓存：直接展示
-      aiAnalysisBuffer.value = cachedData;
-      aiAnalysis.value.overallAnalysis = cachedData; 
+      const processedContent = normalizeAnalysisText(cachedData);
+      aiAnalysisBuffer.value = processedContent;
+      aiAnalysis.value.overallAnalysis = processedContent; 
       aiAnalyzing.value = false;
       return;
     }
@@ -294,12 +353,7 @@ async () => {
         console.log("%c[AI 原始输出]", "color: #d4a373; font-weight: bold;", aiAnalysisBuffer.value);
 
         const rawContent = aiAnalysisBuffer.value;
-        const processedContent = rawContent
-          .replace(/一、/g, '\n\n一、')
-          .replace(/二、/g, '\n\n二、')
-          .replace(/三、/g, '\n\n三、')
-          .replace(/四、/g, '\n\n四、')
-          .trim();
+        const processedContent = normalizeAnalysisText(rawContent);
 
         // 最终赋值
         if (isAiFailureText(processedContent)) {
@@ -583,6 +637,48 @@ const getConstitutionColor = (name: string) => {
   return constitutionColors[name] || '#ccc';
 };
 
+let analysisSpeechStopRequested = false;
+
+const stopAnalysisSpeech = () => {
+  analysisSpeechStopRequested = true;
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+  }
+  isSpeakingAnalysis.value = false;
+};
+
+const toggleAnalysisSpeech = () => {
+  if (isSpeakingAnalysis.value) {
+    stopAnalysisSpeech();
+    return;
+  }
+  if (!('speechSynthesis' in window)) {
+    cardStatus.value = '当前浏览器不支持语音播报。';
+    return;
+  }
+
+  const text = analysisSpeechText.value;
+  if (!text) return;
+  analysisSpeechStopRequested = false;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'zh-CN';
+  utterance.rate = 0.95;
+  utterance.pitch = 1;
+  utterance.onend = () => {
+    isSpeakingAnalysis.value = false;
+  };
+  utterance.onerror = (event) => {
+    isSpeakingAnalysis.value = false;
+    if (analysisSpeechStopRequested || event.error === 'canceled' || event.error === 'interrupted') {
+      return;
+    }
+    cardStatus.value = '语音播报失败，请检查浏览器权限或系统语音设置。';
+  };
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
+  isSpeakingAnalysis.value = true;
+};
+
 // 保存提醒设置
 const saveReminder = async () => {
   if (!nextTestDate.value) {
@@ -657,6 +753,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  stopAnalysisSpeech();
   if (lineChart) {
     lineChart.dispose();
     lineChart = null;

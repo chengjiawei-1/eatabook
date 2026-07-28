@@ -24,6 +24,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/users/login",
                         "/api/users/register",
                         "/api/users/avatars",
+                        "/api/speech/config/status",
                         "/uploads/**"
                 );
     }

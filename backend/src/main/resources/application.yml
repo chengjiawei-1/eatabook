@@ -243,3 +243,22 @@ neo4j:
   uri: ${NEO4J_URI:bolt://localhost:7687}
   username: ${NEO4J_USERNAME:neo4j}
   password: ${NEO4J_PASSWORD:12345678}
+
+# ==============================
+# Xfyun speech recognition
+# ==============================
+xfyun:
+  speech:
+    app-id: ${XFYUN_SPEECH_APP_ID:}
+    api-key: ${XFYUN_SPEECH_API_KEY:}
+    api-secret: ${XFYUN_SPEECH_API_SECRET:}
+    endpoint: ${XFYUN_SPEECH_ENDPOINT:wss://iat.xf-yun.com/v1}
+    domain: ${XFYUN_SPEECH_DOMAIN:slm}
+    language: ${XFYUN_SPEECH_LANGUAGE:zh_cn}
+    accent: ${XFYUN_SPEECH_ACCENT:mandarin}
+    format: ${XFYUN_SPEECH_FORMAT:audio/L16;rate=16000}
+    sample-rate: ${XFYUN_SPEECH_SAMPLE_RATE:16000}
+    max-audio-bytes: ${XFYUN_SPEECH_MAX_AUDIO_BYTES:1920000}
+    chunk-size: ${XFYUN_SPEECH_CHUNK_SIZE:1280}
+    frame-interval-millis: ${XFYUN_SPEECH_FRAME_INTERVAL_MILLIS:40}
+    timeout-seconds: ${XFYUN_SPEECH_TIMEOUT_SECONDS:90}

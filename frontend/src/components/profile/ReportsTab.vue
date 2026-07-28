@@ -30,6 +30,13 @@
             <div class="text-left md:text-right">
               <span class="inline-block px-5 py-2 bg-[#fdfaf7] border-2 border-[#d4a373]/30 rounded-xl text-lg font-serif font-bold text-[#8a6d51]">{{ report.mainConstitution }}</span>
             </div>
+            <button
+              class="report-action-btn"
+              title="下载体质分析报告"
+              @click.stop="downloadReport(report)"
+            >
+              <i class="fa-solid fa-file-arrow-down"></i>
+            </button>
             <i class="fa-solid fa-chevron-right text-2xl text-[#e3d5ca] group-hover:text-[#d4a373] group-hover:translate-x-2 transition-all"></i>
           </div>
         </div>
@@ -127,7 +134,10 @@
             </div>
           </div>
 
-          <div class="p-8 bg-[#fdfcf8] dark:bg-slate-900 border-t-2 border-[#f2ece4] flex justify-center sticky bottom-0">
+          <div class="p-8 bg-[#fdfcf8] dark:bg-slate-900 border-t-2 border-[#f2ece4] flex flex-col sm:flex-row justify-center gap-3 sticky bottom-0">
+            <button @click="downloadReport(selectedReport)" class="w-full sm:w-64 py-4 bg-[#b86207] text-white rounded-2xl text-lg font-serif font-bold shadow-xl active:scale-95 transition-all">
+              <i class="fa-solid fa-file-arrow-down mr-2"></i>下载报告
+            </button>
             <button @click="selectedReport = null" class="w-full sm:w-64 py-4 bg-[#8a6d51] text-white rounded-2xl text-lg font-serif font-bold shadow-xl active:scale-95 transition-all">
               关闭报告
             </button>
@@ -166,6 +176,24 @@
 
 .max-h-\[90vh\]::-webkit-scrollbar { width: 5px; }
 .max-h-\[90vh\]::-webkit-scrollbar-thumb { background: #d4a373; border-radius: 10px; }
+
+.report-action-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid #eadbca;
+  background: #fffaf4;
+  color: #8a6d51;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.report-action-btn:hover {
+  background: #8a6d51;
+  color: #fff;
+}
 </style>
 
 <script setup lang="ts">
@@ -205,6 +233,64 @@ const getAphorism = (con: string) => {
     '特禀质': '固表辟邪，慎避异物'
   }
   return dict[con] || '调和阴阳，顺应四时'
+}
+
+const normalizeText = (value: any, fallback = '暂无记录') => {
+  const text = String(value || '').trim()
+  return text || fallback
+}
+
+const downloadTextFile = (filename: string, content: string) => {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.download = filename
+  link.href = url
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+const downloadReport = (report: any) => {
+  if (!report) return
+
+  const main = normalizeText(report.mainConstitution, '暂无体质')
+  const date = normalizeText(report.testTime, '暂无测试时间')
+  const content = [
+    '体质分析报告',
+    '',
+    `生成日期：${new Date().toLocaleDateString()}`,
+    `测试时间：${date}`,
+    `主体质：${main}`,
+    `兼有体质：${normalizeText(report.subConstitution, '无')}`,
+    '',
+    '辨证结论',
+    `体质引语：${getAphorism(report.mainConstitution)}`,
+    `年龄关注：${normalizeText(report.ageFocus)}`,
+    '',
+    '治本方针',
+    normalizeText(report.plan),
+    '',
+    '膳食建议',
+    `主食推荐：${normalizeText(report.foodStaple)}`,
+    `蔬果搭配：${normalizeText(report.foodVeg)}`,
+    `肉类选材：${normalizeText(report.foodMeat)}`,
+    '',
+    '禁忌提醒',
+    normalizeText(report.ageAvoid),
+    '',
+    '地域时令',
+    normalizeText(report.region),
+    '',
+    '日常起居',
+    normalizeText(report.daily),
+    '',
+    '提示：体质结果是食养参考，不替代医生诊断。若有明显不适，请及时咨询医生或营养师。',
+    '',
+    'eatabook · 老己食养'
+  ].join('\n')
+
+  const filenameDate = String(report.testTime || new Date().toISOString()).slice(0, 10)
+  downloadTextFile(`体质分析报告-${main}-${filenameDate}.txt`, content)
 }
 
 const loadReports = async () => {
