@@ -398,7 +398,7 @@ import {
 
 } from '@/api/forums';
 import { getUserInfoAPI } from '@/api/user';
-import { getAvatarUrl } from '@/utils/imageUtils';
+import { getAvatarUrl, getForumImageUrl } from '@/utils/imageUtils';
 
 // 导入缺失的组件
 import Nav from '@/components/Nav.vue';
@@ -522,9 +522,9 @@ const tabLoading = ref({
 
 // 辅助函数：图片处理逻辑
 const getPostAllImages = (post: Post) => {
-  const imgs = [];
-  if (post.coverImage) imgs.push(post.coverImage);
-  if (post.images && post.images.length > 0) imgs.push(...post.images);
+  const imgs: string[] = [];
+  if (post.coverImage) imgs.push(getForumImageUrl(post.coverImage));
+  if (post.images && post.images.length > 0) imgs.push(...post.images.map(getForumImageUrl));
   // 去重处理
   return [...new Set(imgs)];
 };

@@ -109,7 +109,12 @@
               {{ book.viewCount || 0 }} 访问
             </div>
             <div class="w-1/3">
-              <img :src="book.coverImage" :alt="book.title" class="w-full h-full object-cover" />
+              <img
+                :src="bookCoverSrc(book)"
+                :alt="book.title"
+                class="w-full h-full object-cover"
+                @error="useBookCoverFallback($event, book)"
+              />
             </div>
             <div class="w-2/3 p-4">
               <h3
@@ -224,6 +229,33 @@ const mapBooks = (apiBooks: AncientBook[]): Book[] => {
       viewCount: book.viewCount || 0, // 添加访问量
       status: book.status === 1 ? 'published' : 'draft', // 添加状态字段
     }));
+};
+
+const normalizeAssetPath = (url?: string) => {
+  if (!url) return "";
+  if (/^https?:\/\//.test(url)) return url;
+  return url.startsWith("/") ? url : `/${url}`;
+};
+
+const withCoverVersion = (url: string) => {
+  if (!url) return "";
+  const separator = url.includes("?") ? "&" : "?";
+  return `${encodeURI(url)}${separator}v=book-cover-20260730`;
+};
+
+const bookCoverSrc = (book: Book) => {
+  return withCoverVersion(normalizeAssetPath(book.coverImage || `/images/book/${book.title}.png`));
+};
+
+const useBookCoverFallback = (event: Event, book: Book) => {
+  const img = event.target as HTMLImageElement;
+  if (img.dataset.coverFallback === "1") {
+    img.removeAttribute("src");
+    return;
+  }
+
+  img.dataset.coverFallback = "1";
+  img.src = withCoverVersion(`/images/book/${book.title}.png`);
 };
 
 // 前端搜索过滤

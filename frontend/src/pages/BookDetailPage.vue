@@ -22,7 +22,13 @@
                 <div class="absolute -inset-2 bg-gradient-to-r from-amber-200 to-amber-500 rounded-xl blur opacity-10 group-hover:opacity-30 transition duration-1000"></div>
                 <div class="aspect-[2/3] relative rounded-lg overflow-hidden shadow-2xl border border-white dark:border-slate-700 bg-white">
                    <div v-show="imageLoading" class="absolute inset-0 bg-amber-50 animate-pulse"></div>
-                   <img :src="normalizeCover(book.bookCoverUrl)" :alt="book.bookName" class="w-full h-full object-contain" @load="imageLoading = false" />
+                   <img
+                     :src="bookCoverSrc(book)"
+                     :alt="book.bookName"
+                     class="w-full h-full object-contain"
+                     @load="imageLoading = false"
+                     @error="useBookCoverFallback($event, book)"
+                   />
                 </div>
               </div>
             </div>
@@ -334,6 +340,28 @@ const normalizeCover = (url?: string) => {
   if (/^https?:\/\//.test(url)) return url;
   if (url.startsWith("/")) return url;
   return "/" + url;
+};
+
+const withCoverVersion = (url: string) => {
+  if (!url) return "";
+  const separator = url.includes("?") ? "&" : "?";
+  return `${encodeURI(url)}${separator}v=book-cover-20260730`;
+};
+
+const bookCoverSrc = (bookData: AncientBook) => {
+  return withCoverVersion(normalizeCover(bookData.bookCoverUrl || `/images/book/${bookData.bookName}.png`));
+};
+
+const useBookCoverFallback = (event: Event, bookData: AncientBook) => {
+  const img = event.target as HTMLImageElement;
+  if (img.dataset.coverFallback === "1") {
+    imageLoading.value = false;
+    img.removeAttribute("src");
+    return;
+  }
+
+  img.dataset.coverFallback = "1";
+  img.src = withCoverVersion(`/images/book/${bookData.bookName}.png`);
 };
 
 const mapCategory = (apiCategory: string): string => {

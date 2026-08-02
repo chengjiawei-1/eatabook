@@ -1,0 +1,12 @@
+.git
+.idea
+rag-env
+chroma_data
+*.log
+backend/.env
+backend/target
+backend/uploads
+frontend/.env
+frontend/node_modules
+frontend/dist
+frontend/.chrome-speech-test

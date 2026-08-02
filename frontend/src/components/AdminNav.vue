@@ -30,6 +30,7 @@
             :active-class="activeClass"
             :class="[baseLinkClass, $route.path === item.to ? '' : inactiveClass]"
             class="whitespace-nowrap"
+            @click="closeMenus"
           >
             <i :class="['fa-solid', item.icon, 'mr-2 text-xs']"></i>
             {{ item.name }}
@@ -37,22 +38,46 @@
 
           <!-- B. 下拉菜单 -->
           <!-- 修改点：确保 relative 容器 z-index 正确 -->
-          <div v-else class="relative group z-20">
-            <button
+          <div
+            v-else
+            class="relative z-20"
+            @mouseenter="openDropdown = item.name"
+            @mouseleave="closeMenus"
+          >
+            <div
               :class="[
-                baseLinkClass, 
-                isChildActive(item.children) ? activeClass : inactiveClass
+                baseLinkClass,
+                isChildActive(item.children) || isDropdownOpen(item.name) ? activeClass : inactiveClass
               ]"
-              class="whitespace-nowrap flex items-center"
+              class="whitespace-nowrap"
             >
-              <i :class="['fa-solid', item.icon, 'mr-2 text-xs']"></i>
-              {{ item.name }}
-              <i class="fa-solid fa-chevron-down ml-1.5 text-[10px] opacity-50 group-hover:rotate-180 transition-transform"></i>
-            </button>
+              <RouterLink
+                :to="item.children[0].to"
+                class="flex items-center"
+                @click="closeMenus"
+              >
+                <i :class="['fa-solid', item.icon, 'mr-2 text-xs']"></i>
+                {{ item.name }}
+              </RouterLink>
+              <button
+                type="button"
+                class="ml-1.5 flex h-5 w-5 items-center justify-center rounded hover:bg-slate-200/70 dark:hover:bg-slate-600/70"
+                :aria-expanded="isDropdownOpen(item.name)"
+                @click.stop="toggleDropdown(item.name)"
+              >
+                <i
+                  class="fa-solid fa-chevron-down text-[10px] opacity-60 transition-transform"
+                  :class="{ 'rotate-180': isDropdownOpen(item.name) }"
+                ></i>
+              </button>
+            </div>
 
             <!-- 下拉浮层 -->
             <!-- 修改点：top 设为 120% 并增加 py-2，增强触发稳定性 -->
-            <div class="absolute top-[110%] left-1/2 -translate-x-1/2 w-44 p-1 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-200">
+            <div
+              class="absolute top-[110%] left-1/2 -translate-x-1/2 w-44 p-1 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 transition-all duration-200"
+              :class="isDropdownOpen(item.name) ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-2 pointer-events-none'"
+            >
               <!-- 为了防止鼠标移出间隙导致菜单消失，增加一个透明遮罩层 -->
               <div class="absolute -top-4 left-0 right-0 h-4 bg-transparent"></div>
               
@@ -64,6 +89,7 @@
                 :class="$route.path === child.to 
                   ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 font-semibold' 
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-slate-100'"
+                @click="closeMenus"
               >
                 <i :class="['fa-solid', child.icon, 'mr-3 w-4 text-center text-xs opacity-80']"></i>
                 {{ child.name }}
@@ -126,6 +152,7 @@ const auth = useAuthStore();
 const baseLinkClass = 'px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center'
 const activeClass = 'bg-white dark:bg-slate-700 text-amber-700 dark:text-amber-400 shadow-sm ring-1 ring-black/5 dark:ring-white/10'
 const inactiveClass = 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-700/50'
+const openDropdown = ref<string | null>(null)
 
 // 重新组织的导航配置
 const navConfig = ref([
@@ -174,6 +201,16 @@ const navConfig = ref([
 // 判断子路由是否激活
 const isChildActive = (children: any[]) => {
   return children.some(child => $route.path === child.to)
+}
+
+const isDropdownOpen = (name: string) => openDropdown.value === name
+
+const toggleDropdown = (name: string) => {
+  openDropdown.value = openDropdown.value === name ? null : name
+}
+
+const closeMenus = () => {
+  openDropdown.value = null
 }
 
 const logout = () => {

@@ -104,7 +104,7 @@
           class="inline-flex items-center gap-1 text-amber-950/80 dark:text-amber-400 font-medium hover:text-amber-600 transition-colors"
         >
           <img 
-            src="/images/备案图标.png" 
+            :src="beianIconUrl" 
             alt="公安备案图标" 
             class="inline-block"
             style="width: 14px; height: auto;"
@@ -131,6 +131,7 @@ import FeedbackModal from './FeedbackModal.vue';
 import { submitFeedback } from '../api/feedback';
 
 const currentYear = new Date().getFullYear();
+const beianIconUrl = "/images/备案图标.png";
 
 const isFeedbackModalOpen = ref(false);
 

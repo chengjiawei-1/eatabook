@@ -91,7 +91,7 @@
       class="inline-flex items-center gap-1 text-amber-900 hover:text-amber-700 dark:text-amber-300 transition-colors underline-offset-2 hover:underline"
     >
       <img 
-        src="/images/备案图标.png" 
+        :src="beianIconUrl" 
         alt="公安备案图标" 
         class="w-4 h-4"
         style="width: 16px; height: 17px;"
@@ -116,6 +116,8 @@ const auth = useAuthStore();
 const loginBackgroundStyle = {
   backgroundImage: `url(${loginBackground})`,
 };
+
+const beianIconUrl = "/images/备案图标.png";
 
 const isLoading = ref(false);
 const error = ref("");

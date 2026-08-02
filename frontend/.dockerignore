@@ -1,0 +1,15 @@
+.chrome-speech-test
+.env
+.env.*
+!.env.example
+*.log
+dist
+node_modules
+public/cover
+public/images
+src/assets/videos
+src/assets/images/book
+src/assets/images/sysd
+src/assets/images/yszy
+src/assets/images/yxl
+src/assets/images/yzfsj

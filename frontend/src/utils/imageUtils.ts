@@ -10,10 +10,25 @@ const defaultImageSVG = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlna
 
 const defaultAvatarSVG = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPGNpcmNsZSBjeD0iNTAiIGN5PSI0MCIgcj0iMjAiIGZpbGw9IiNlOWU5ZTkiLz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9Ijc1IiByPSIxNSIgZmlsbD0iI2U5ZTllOSIvPgo8L3N2Zz4=';
 
+const legacyUploadHosts = [
+  'http://localhost:8081',
+  'http://118.178.122.36:8081',
+  'http://121.43.210.94:8081',
+  'http://172.24.64.1:8081',
+  'http://192.168.254.27:8081',
+];
+
+const normalizeLegacyUploadUrl = (url: string): string => {
+  const matchedHost = legacyUploadHosts.find(host => url.startsWith(host));
+  return matchedHost ? url.replace(matchedHost, '') : url;
+};
+
 export const getImageUrl = (url: string): string => {
   if (!url || url === 'null' || url === 'undefined' || url.trim() === '') {
     return defaultImageSVG;
   }
+
+  url = normalizeLegacyUploadUrl(url);
   
   // 如果是完整URL，直接返回
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('//')) {

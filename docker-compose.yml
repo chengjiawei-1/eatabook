@@ -1,0 +1,149 @@
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-lyfw}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./deploy/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["sh", "-c", "redis-server $${REDIS_PASSWORD:+--requirepass $$REDIS_PASSWORD}"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VIRTUAL_HOST:-/}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  neo4j:
+    image: neo4j:5-community
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: ${NEO4J_USERNAME:-neo4j}/${NEO4J_PASSWORD:-12345678}
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+
+  chroma:
+    image: chromadb/chroma:latest
+    restart: unless-stopped
+    environment:
+      IS_PERSISTENT: "TRUE"
+      PERSIST_DIRECTORY: /chroma/chroma
+    volumes:
+      - chroma_data:/chroma/chroma
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      neo4j:
+        condition: service_started
+      chroma:
+        condition: service_started
+    environment:
+      SERVER_PORT: 8081
+      MYSQL_USERNAME: ${MYSQL_USERNAME:-root}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-123456}
+      MYSQL_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-lyfw}?serverTimezone=GMT%2B8&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DATABASE: 0
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_VIRTUAL_HOST: ${RABBITMQ_VIRTUAL_HOST:-/}
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USERNAME: ${NEO4J_USERNAME:-neo4j}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-12345678}
+      CHROMA_HOST: http://chroma
+      CHROMA_PORT: 8000
+      SPRING_AI_VECTORSTORE_CHROMA_TENANT_NAME: ${CHROMA_TENANT_NAME:-default_tenant}
+      SPRING_AI_VECTORSTORE_CHROMA_DATABASE_NAME: ${CHROMA_DATABASE_NAME:-default_database}
+      CHROMA_COLLECTION_NAME: ${CHROMA_COLLECTION_NAME:-health_knowledge}
+      CHROMA_INITIALIZE_SCHEMA: ${CHROMA_INITIALIZE_SCHEMA:-true}
+      RAG_INDEX_ON_STARTUP: ${RAG_INDEX_ON_STARTUP:-true}
+      RAG_CLEAR_BEFORE_INDEX: ${RAG_CLEAR_BEFORE_INDEX:-true}
+      RAG_FAIL_ON_INDEX_ERROR: ${RAG_FAIL_ON_INDEX_ERROR:-false}
+      RAG_KNOWLEDGE_LOCATION: ${RAG_KNOWLEDGE_LOCATION:-classpath*:knowledge/**/*}
+      RAG_INDEX_BATCH_SIZE: ${RAG_INDEX_BATCH_SIZE:-25}
+      FILE_BASE_URL: ${FILE_BASE_URL:-http://localhost}
+      FILE_UPLOAD_DIR: /app/uploads/
+      SILICONFLOW_API_KEY: ${SILICONFLOW_API_KEY:-}
+      SILICONFLOW_BASE_URL: ${SILICONFLOW_BASE_URL:-https://api.siliconflow.cn/v1}
+      SILICONFLOW_CHAT_COMPLETIONS_PATH: ${SILICONFLOW_CHAT_COMPLETIONS_PATH:-/chat/completions}
+      AI_CHAT_DEFAULT_MODEL: ${AI_CHAT_DEFAULT_MODEL:-Qwen/Qwen3-14B}
+      AI_EMBEDDING_BASE_URL: ${AI_EMBEDDING_BASE_URL:-https://api.siliconflow.cn/v1}
+      AI_EMBEDDING_PATH: ${AI_EMBEDDING_PATH:-/embeddings}
+      AI_EMBEDDING_MODEL: ${AI_EMBEDDING_MODEL:-BAAI/bge-m3}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      DEEPSEEK_CHAT_COMPLETIONS_PATH: ${DEEPSEEK_CHAT_COMPLETIONS_PATH:-/chat/completions}
+      DEEPSEEK_CHAT_MODEL: ${DEEPSEEK_CHAT_MODEL:-deepseek-chat}
+      ARK_API_KEY: ${ARK_API_KEY:-}
+      ARK_BASE_URL: ${ARK_BASE_URL:-https://ark.cn-beijing.volces.com/api/v3}
+      ARK_IMAGE_MODEL: ${ARK_IMAGE_MODEL:-doubao-seedream-4-5-251128}
+      XFYUN_SPEECH_APP_ID: ${XFYUN_SPEECH_APP_ID:-}
+      XFYUN_SPEECH_API_KEY: ${XFYUN_SPEECH_API_KEY:-}
+      XFYUN_SPEECH_API_SECRET: ${XFYUN_SPEECH_API_SECRET:-}
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ""
+        VITE_WS_BASE_URL: ""
+        VITE_QWEATHER_API_KEY: ${VITE_QWEATHER_API_KEY:-}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    environment:
+      QWEATHER_API_HOST: ${QWEATHER_API_HOST:-https://your-api-host.qweatherapi.com}
+    volumes:
+      - ./frontend/public/images:/usr/share/nginx/html/images:ro
+      - ./frontend/public/cover:/usr/share/nginx/html/cover:ro
+      - ./frontend/src/assets/videos:/usr/share/nginx/html/videos:ro
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+
+volumes:
+  mysql_data:
+  redis_data:
+  rabbitmq_data:
+  neo4j_data:
+  neo4j_logs:
+  chroma_data:
+  backend_uploads:
